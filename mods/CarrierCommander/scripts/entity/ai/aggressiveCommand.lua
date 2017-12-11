@@ -25,7 +25,7 @@ function aggressiveCommand.init()
     end
 end
 
-function aggressiveCommand.updateServer(timestep)
+--[[function aggressiveCommand.updateServer(timestep)
     aggressiveCommand.tf = aggressiveCommand.tf + timestep
     if aggressiveCommand.tf > 5 and aggressiveCommand.active then
         aggressiveCommand.tf = 0
@@ -34,7 +34,7 @@ function aggressiveCommand.updateServer(timestep)
         local e = shipAI:getNearestEnemy(aggressiveCommand.hostileThreshold)
         if e then print("Enemy", e.name) end
     end
-end
+end]]
 
 function aggressiveCommand.initConfigUI(scrollframe, pos, size)
 
@@ -69,13 +69,11 @@ end
 
 function aggressiveCommand.registerTarget()
     if valid(aggressiveCommand.enemyTarget) then
-        print("registered",aggressiveCommand.enemyTarget)
         return aggressiveCommand.enemyTarget:registerCallback("onDestroyed", "enemyDestroyed")
     end
 end
 
 function aggressiveCommand.unregisterTarget(entity)
-    print("unregister", entity.name)
     if valid(entity) then
         return aggressiveCommand.enemyTarget:unregisterCallback("onDestroyed", "enemyDestroyed")
     end
@@ -85,7 +83,6 @@ function aggressiveCommand.unregisterTarget(entity)
 end
 
 function enemyDestroyed(index, lastDamageInflictor)
-    print("enemyDestroyed", aggressiveCommand.enemyTarget.durability, aggressiveCommand.numTurrets)
     if aggressiveCommand.findEnemy(index) then
         aggressiveCommand.attack()
     else
@@ -95,7 +92,6 @@ end
 
 function aggressiveCommand.attack()
     if not valid(aggressiveCommand.enemyTarget) then
-        print("in attack(), invalid enemy get")
         if not aggressiveCommand.findEnemy() then cc.applyCurrentAction(aggressiveCommand.prefix, -2) return end
     end
     local numSquads = 0
@@ -111,8 +107,6 @@ function aggressiveCommand.attack()
     if numSquads > 0 then
         cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, aggressiveCommand.enemyTarget.name)
     else
-        print("attack")
-        printTable(aggressiveCommand.squads)
         cc.applyCurrentAction(aggressiveCommand.prefix, -2)
     end
     return numSquads
@@ -141,7 +135,6 @@ function aggressiveCommand.getSquadsToManage()
     end
 
     aggressiveCommand.squads = squads
-    printTable(aggressiveCommand.squads)
     if hasChanged or oldLength ~= tablelength(squads) then
         return 1
     else
@@ -158,7 +151,6 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
 		local oldEnemy = aggressiveCommand.enemyTarget
 
 		if ignoredEntityIndex then
-            print("ignoring", Entity(ignoredEntityIndex).name)
             if ignoredEntityIndex.number and aggressiveCommand.enemyTarget and aggressiveCommand.enemyTarget.index.number then
                 aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
                 oldEnemy = nil
@@ -188,7 +180,6 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
         if valid(aggressiveCommand.enemyTarget) then
             if hasTargetChanged then
                 if oldEnemy and oldEnemy.durability > 0 then aggressiveCommand.unregisterTarget(oldEnemy) end
-                print("trying to register",aggressiveCommand.enemyTarget)
                 aggressiveCommand.registerTarget()
                 return true
             else
@@ -201,7 +192,7 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
 end
 
 function aggressiveCommand.getPriority(entity)
-    if not valid(entity) then print("not valid 2") return -1 end
+    if not valid(entity) then return -1 end
 	local p = 0
 
 	if(entity.isShip) then p = cc.Config.Settings.Aggressive.priorities.ship
@@ -214,8 +205,8 @@ function aggressiveCommand.getPriority(entity)
 end
 --checks for hostility, xsotan ownership, civil-config, station-config
 function aggressiveCommand.checkEnemy(e, ignored)
-    if not valid(e) then print("not valid 1") return false end
-    if ignored and e.index.number == ignored.number then print("entity == ignored")return false end
+    if not valid(e) then return false end
+    if ignored and e.index.number == ignored.number then return false end
     local faction = Faction()
     local b = false
 	if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then b = true -- low faction
@@ -331,13 +322,8 @@ function aggressiveCommand.activate(button)
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     aggressiveCommand.getSquadsToManage()
-    if aggressiveCommand.enemyTarget then
-        print(Entity().name, "target found", aggressiveCommand.enemyTarget.name)
-    else
-        print(Entity().name, "No target found")
-    end
+
     if aggressiveCommand.findEnemy() then
-        print("enemy found", aggressiveCommand.enemyTarget.name)
         aggressiveCommand.attack()
     else
         cc.applyCurrentAction(aggressiveCommand.prefix, -2)

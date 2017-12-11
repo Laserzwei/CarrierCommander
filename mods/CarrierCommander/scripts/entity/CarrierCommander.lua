@@ -231,7 +231,7 @@ function onSectorChanged(x, y)
 end
 
 function relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore)
-	if indexA.number == Entity().factionIndex.number or indexB.number == Entity().index.number then
+	if indexA == Entity().factionIndex or indexB == Entity().factionIndex then
 		for prefix, command in pairs(cc.commands) do
 			if command.relationsChanged then command.relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore) end
 		end
@@ -619,7 +619,7 @@ function cc.setAutoAssignTooltip(active)
 		else
 			cc.autoAssignPicture.color = ColorRGB(0.1, 0.8, 0.1)
 		end
-		if numError >= tablelength(cc.commands) then
+		if numError >= tablelength(cc.commands)-1 then
 			cc.autoAssignPicture.color = ColorRGB(0.8, 0.1, 0.0)
 		end
         cc.autoAssignPicture.tooltip = text
