@@ -7,14 +7,15 @@ require ("utility")
 salvageCommand = {}
 salvageCommand.prefix = nil
 salvageCommand.active = false
-salvageCommand.squads = {}            --[squadIndex] = squadIndex           --squads to manage
-salvageCommand.controlledFighters = {}   --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+salvageCommand.squads = {}                  --[squadIndex] = squadIndex           --squads to manage
+salvageCommand.controlledFighters = {}      --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 --data
 
 --required UI
+salvageCommand.needsButton = true
 salvageCommand.inactiveButtonCaption = "Carrier - Start Salvaging"
 salvageCommand.activeButtonCaption = "Carrier - Stop Salvaging"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
-salvageCommand.activeTooltip = cc.l.actionTostringMap[5]
+salvageCommand.activeTooltip = cc.l.actionTostringMap[6]
 salvageCommand.inactiveTooltip = cc.l.actionTostringMap[-1]
 
 function salvageCommand.init()
@@ -78,9 +79,7 @@ function salvageCommand.salvage()
     if numSquads > 0 then
         cc.applyCurrentAction(salvageCommand.prefix, 6)
     else
-        print("salvage")
-        printTable(salvageCommand.squads)
-        cc.applyCurrentAction(salvageCommand.prefix, -2)
+        cc.applyCurrentAction(salvageCommand.prefix, "targetButNoFighter")
     end
     return numSquads
 end
@@ -113,7 +112,10 @@ end
 function salvageCommand.findWreckage()
     local ship = Entity()
     local sector = Sector()
-
+    local oldWreckNum
+    if salvageCommand.salvagableWreck then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
+        oldWreckNum = mineCommand.salvagableWreck.index.number
+    end
     if valid(salvageCommand.salvagableWreck) then
         salvageCommand.unregisterTarget()
     end
@@ -125,7 +127,7 @@ function salvageCommand.findWreckage()
     --Go after closest wreckage first
     for _, w in pairs(asteroids) do
         local resources = w:getMineableResources()
-        if resources ~= nil and resources > 25 then
+        if resources ~= nil and resources > 25 and oldWreckNum ~= w.index.number then
             local dist = distance2(w.translationf, ship.translationf)
             if dist < nearest then
                 nearest = dist
@@ -214,11 +216,12 @@ function salvageCommand.activate(button)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    salvageCommand.squads = {}
     if salvageCommand.findWreckage() then
         salvageCommand.getSquadsToManage()
         salvageCommand.salvage()
     else
-        cc.applyCurrentAction(salvageCommand.prefix, -2)
+        cc.applyCurrentAction(salvageCommand.prefix, "idle")
     end
 end
 
@@ -232,7 +235,6 @@ function salvageCommand.deactivate(button)
     -- space for stuff to do e.g. landing your fighters/emptying: salvageCommand.squads = {} / salvageCommand.startedFighters = {}
     -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string salvageCommand.prefix,key action,...), where ... are string.format-able objects
     cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
-    salvageCommand.squads = {}
     salvageCommand.salvagableWreck = nil
 end
 

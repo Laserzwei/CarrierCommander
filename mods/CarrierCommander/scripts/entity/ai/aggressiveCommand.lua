@@ -7,16 +7,17 @@ require ("utility")
 aggressiveCommand = {}
 aggressiveCommand.prefix = nil
 aggressiveCommand.active = false
-aggressiveCommand.squads = {}            --[squadIndex] = squadIndex           --squads to manage
+aggressiveCommand.squads = {}               --[squadIndex] = squadIndex           --squads to manage
 aggressiveCommand.controlledFighters = {}   --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 --data
 aggressiveCommand.hostileThreshold = -40000
 aggressiveCommand.tf = 0
 
 --required UI
+aggressiveCommand.needsButton = true
 aggressiveCommand.inactiveButtonCaption = "Carrier - Start Attacking"
 aggressiveCommand.activeButtonCaption = "Carrier - Stop Attacking"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
-aggressiveCommand.activeTooltip = cc.l.actionTostringMap[-2]
+aggressiveCommand.activeTooltip = cc.l.actionTostringMap["idle"]
 aggressiveCommand.inactiveTooltip = cc.l.actionTostringMap[-1]
 
 function aggressiveCommand.init()
@@ -86,13 +87,13 @@ function enemyDestroyed(index, lastDamageInflictor)
     if aggressiveCommand.findEnemy(index) then
         aggressiveCommand.attack()
     else
-        cc.applyCurrentAction(aggressiveCommand.prefix, -2)
+        cc.applyCurrentAction(aggressiveCommand.prefix, "idle")
     end
 end
 
 function aggressiveCommand.attack()
     if not valid(aggressiveCommand.enemyTarget) then
-        if not aggressiveCommand.findEnemy() then print("invalid attack target"); cc.applyCurrentAction(aggressiveCommand.prefix, -2) return end
+        if not aggressiveCommand.findEnemy() then print("invalid attack target"); cc.applyCurrentAction(aggressiveCommand.prefix, "idle") return end
     end
     local numSquads = 0
     local hangar = Hangar(Entity().index)
@@ -107,7 +108,7 @@ function aggressiveCommand.attack()
     if numSquads > 0 then
         cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, aggressiveCommand.enemyTarget.name)
     else
-        cc.applyCurrentAction(aggressiveCommand.prefix, -2)
+        cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
     end
     return numSquads
 end
@@ -125,7 +126,7 @@ function aggressiveCommand.getSquadsToManage()
                 if not aggressiveCommand.squads[squad] then
                     hasChanged = true
                 end
-            elseif hangar:getSquadFighters(squad) == 0 then
+            elseif hangar:getSquadFighters(squad) == 0 and hangar:getSquadFreeSlots(squad) < 12 then
                 squads[squad] = squad
                 if not aggressiveCommand.squads[squad] then
                     hasChanged = true
@@ -135,9 +136,14 @@ function aggressiveCommand.getSquadsToManage()
     end
 
     aggressiveCommand.squads = squads
-    if hasChanged or oldLength ~= tablelength(squads) then
+    local len = tablelength(squads)
+
+    if (hasChanged  or oldLength ~= tablelength(squads)) and len > 0 then
         return 1
     else
+        if len == 0 then
+            cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
+        end
         return 0
     end
 end
@@ -156,7 +162,7 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
         end
 
         if ignoredEntityIndex then
-            if ignoredEntityIndex.number and aggressiveCommand.enemyTarget and aggressiveCommand.enemyTarget.index.number then
+            if aggressiveCommand.enemyTarget and aggressiveCommand.enemyTarget.index.number == ignoredEntityIndex.number then
                 aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
                 oldEnemy = nil
             end
@@ -289,17 +295,6 @@ function aggressiveCommand.onSectorChanged(x, y)
     end
 end
 
-function aggressiveCommand.relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore)
-    if aggressiveCommand.active then
-        if relations <= aggressiveCommand.hostileThreshold then
-            print("onrealtionchanged", Faction(indexA).name, Faction(indexB).name, relations, status, relationsBefore, statusBefore)
-            if aggressiveCommand.findEnemy() then
-                aggressiveCommand.attack()
-            end
-        end
-    end
-end
-
 function aggressiveCommand.flyableCreated(entity)
     if aggressiveCommand.active then
         if aggressiveCommand.enemyTarget then
@@ -330,16 +325,17 @@ function aggressiveCommand.activate(button)
         cc.l.tooltipadditions[aggressiveCommand.prefix] = "+ Attacking Enemies"
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
 
-        cc.applyCurrentAction(aggressiveCommand.prefix, -2)
+        cc.applyCurrentAction(aggressiveCommand.prefix, "idle")
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    aggressiveCommand.squads = {}
     aggressiveCommand.getSquadsToManage()
 
     if aggressiveCommand.findEnemy() then
         aggressiveCommand.attack()
     else
-        cc.applyCurrentAction(aggressiveCommand.prefix, -2)
+        cc.applyCurrentAction(aggressiveCommand.prefix, "idle")
     end
 end
 
@@ -353,7 +349,6 @@ function aggressiveCommand.deactivate(button)
     -- space for stuff to do e.g. landing your fighters/emptying: aggressiveCommand.squads = {} / aggressiveCommand.startedFighters = {}
     -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string aggressiveCommand.prefix,key action,...), where ... are string.format-able objects
     cc.applyCurrentAction(aggressiveCommand.prefix, aggressiveCommand.setSquadsIdle())
-    aggressiveCommand.squads = {}
     aggressiveCommand.targetEnemy = nil
 end
 

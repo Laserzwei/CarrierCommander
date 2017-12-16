@@ -7,11 +7,12 @@ require ("utility")
 mineCommand = {}
 mineCommand.prefix = nil
 mineCommand.active = false
-mineCommand.squads = {}            --[squadIndex] = squadIndex           --squads to manage
-mineCommand.controlledFighters = {}   --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+mineCommand.squads = {}                 --[squadIndex] = squadIndex           --squads to manage
+mineCommand.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 --data
 
 --required UI
+mineCommand.needsButton = true
 mineCommand.inactiveButtonCaption = "Carrier - Start Mining"
 mineCommand.activeButtonCaption = "Carrier - Stop Mining"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
 mineCommand.activeTooltip = cc.l.actionTostringMap[5]
@@ -57,6 +58,7 @@ function mineCommand.unregisterTarget()
 end
 
 function asteroidDestroyed(index, lastDamageInflictor)
+    print("asteroid destroyed fired")
     if mineCommand.findMinableAsteroid() then
         mineCommand.mine()
     else
@@ -85,9 +87,7 @@ function mineCommand.mine()
     if numSquads > 0 then
         cc.applyCurrentAction(mineCommand.prefix, 5)
     else
-        print("mine")
-        printTable(mineCommand.squads)
-        cc.applyCurrentAction(mineCommand.prefix, -2)
+        cc.applyCurrentAction(mineCommand.prefix, "targetButNoFighter")
     end
     return numSquads
 end
@@ -120,6 +120,10 @@ end
 function mineCommand.findMinableAsteroid()
     local ship = Entity()
     local sector = Sector()
+    local oldAstroNum
+    if mineCommand.minableAsteroid then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
+        oldAstroNum = mineCommand.minableAsteroid.index.number
+    end
 
     if valid(mineCommand.minableAsteroid) then
         mineCommand.unregisterTarget()
@@ -132,7 +136,7 @@ function mineCommand.findMinableAsteroid()
     --Go after closest asteroids first
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
-        if (resources ~= nil and resources > 0) or cc.settings["mineAllSetting"] then
+        if ((resources ~= nil and resources > 0) or cc.settings["mineAllSetting"]) and a.index.number ~= oldAstroNum then
             local dist = distance2(a.translationf, ship.translationf)
             if dist < nearest then
                 nearest = dist
@@ -221,11 +225,12 @@ function mineCommand.activate(button)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    mineCommand.squads = {}
     if mineCommand.findMinableAsteroid() then
         mineCommand.getSquadsToManage()
         mineCommand.mine()
     else
-        cc.applyCurrentAction(mineCommand.prefix, -2)
+        cc.applyCurrentAction(mineCommand.prefix, "idle")
     end
 end
 
@@ -239,7 +244,6 @@ function mineCommand.deactivate(button)
     -- space for stuff to do e.g. landing your fighters/emptying: mineCommand.squads = {} / mineCommand.startedFighters = {}
     -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string mineCommand.prefix,key action,...), where ... are string.format-able objects
     cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
-    mineCommand.squads = {}
     mineCommand.minableAsteroid = nil
 end
 

@@ -1,10 +1,8 @@
 local list = {}
 --
 list.selectableOrderNames = {}
-    --list.selectableOrderNames[FighterOrders.Attack] = "Attack"
     list.selectableOrderNames[FighterOrders.Defend] = "Defend"
     list.selectableOrderNames[FighterOrders.Return] = "Dock"
-    --list.selectableOrderNames[FighterOrders.FlyToLocation] = "FlyToLocation"
 
 list.uiElementToSettingMap = {}
 
@@ -14,7 +12,8 @@ setmetatable(list.actionTostringMap,{
 })
     list.actionTostringMap["noHangar"] = "No Hangar found!"
     list.actionTostringMap["noFighterController"] = "No FighterController found!"
-    list.actionTostringMap[-2] = "Idle and waiting for targets."
+    list.actionTostringMap["targetButNoFighter"] = "Found a target, but no suitable fighters."
+    list.actionTostringMap["idle"] = "Idle and waiting for targets."
     list.actionTostringMap[-1] = "Not doing anything."
     list.actionTostringMap[FighterOrders.Attack] = "Attacking ship %s"
     list.actionTostringMap[FighterOrders.Defend] = "Defending ship %s"
@@ -28,9 +27,10 @@ list.actionToColorMap = {}
 setmetatable(list.actionToColorMap,{
   __index = function(t,k) return ColorRGB(0.9, 0.1, 0.1) end    --fallbackfunction, getting called when indexed with an invalid key
 })
-    list.actionTostringMap["noHangar"] = ColorRGB(0.9, 0.1, 0.1)
-    list.actionTostringMap["noFighterController"] = ColorRGB(0.9, 0.1, 0.1)
-    list.actionToColorMap[-2] = ColorRGB(0.3, 0.3, 0.9)
+    list.actionToColorMap["noHangar"] = ColorRGB(0.9, 0.1, 0.1)
+    list.actionToColorMap["noFighterController"] = ColorRGB(0.9, 0.1, 0.1)
+    list.actionToColorMap["targetButNoFighter"] = ColorRGB(0.9, 0.1, 0.1)
+    list.actionToColorMap["idle"] = ColorRGB(0.3, 0.3, 0.9)
     list.actionToColorMap[-1] = ColorRGB(0.3, 0.3, 0.3)
     list.actionToColorMap[FighterOrders.Attack] = ColorRGB(0.1, 0.8, 0.1)
     list.actionToColorMap[FighterOrders.Defend] = ColorRGB(0.3, 0.3, 0.3)

@@ -4,12 +4,13 @@ require ("utility")
 
 --required Data
 dockAll = {}
-dockAll.prefix = "dockAll"
+dockAll.prefix = nil
 dockAll.active = false
-dockAll.squads = {}            --[1-12] = squadIndex           --squads to manage
-dockAll.controlledFighters = {}   --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+dockAll.squads = {}                 --[1-12] = squadIndex           --squads to manage
+dockAll.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 
 --required UI
+dockAll.needsButton = true
 dockAll.inactiveButtonCaption = "Carrier - Dock All Fighters"
 dockAll.activeButtonCaption = "Carrier - Docking"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
 dockAll.activeTooltip = "Docking Fighters"
@@ -22,8 +23,14 @@ function dockAll.dockAllFighters()
         print("Carrier - Salvage couldn't dock Fighters, Fightercontroller missing")
         return
     end
+
     for _,squad in pairs(dockAll.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Return, Entity().index)
+    end
+    for prefix,command in pairs(cc.commands) do
+        if prefix ~= dockAll.prefix then    --docking command needs dockAll's squads
+            command.squads = {}
+        end
     end
 end
 
@@ -66,7 +73,6 @@ function dockAll.deactivate(button)
     end
     -- space for stuff to do e.g. landing your fighters/emptying: dockAll.squads = {} / dockAll.startedFighters = {}
     -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string prefix,key action,...), where ... are string.format-able objects
-    cc.squadsDockingServer = true
     local ai = ShipAI()
     ai:setIdle()
 

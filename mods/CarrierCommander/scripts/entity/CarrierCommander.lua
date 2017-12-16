@@ -27,11 +27,10 @@ for _,prefix in ipairs(pluginKeys) do
 end
 local sectorX, sectorY
 --data
-cc.thisCarrierStartedFighters = {}     -- [squadIndex] = {[1-n] = fitghterUuid}
-cc.ownedStartedFighters = {}                -- [carrierIndex] = {[squadIndex] = {[1-n] = fitghterUuid}}
+cc.thisCarrierStartedFighters = {}      -- [squadIndex] = {[1-n] = fitghterUuid}
+cc.ownedStartedFighters = {}            -- [carrierIndex] = {[squadIndex] = {[1-n] = fitghterUuid}}
 cc.numActiveCommands = 0
 local isRegistered = false
-cc.squadsDockingServer = false
 cc.squadsDocking = {}
 
 --UI
@@ -49,8 +48,6 @@ function initialize()
     --don't run carrier Commands on a drone!
     if Entity().isDrone then terminate()  return end
 
-    --registerSectorCallbacks()
-    --getAllMyFighters()    --Entities aren'T all available on initialize()
     end
     for prefix, command in pairs(cc.commands) do
         if command.init then command.init() end
@@ -75,45 +72,19 @@ function registerSectorCallbacks()
     Entity():registerCallback("onSquadAdded","squadAdded")
     Entity():registerCallback("onSquadRemove","squadRemove")
 
-    --relationschange
-    Galaxy():registerCallback("onRelationsChanged", "relationsChanged")
-    --[[if Player() then
-        print(Entity().name, "Player")
-        Player():registerCallback("onRelationLevelChanged", "relationLevelChanged")
-        Player():registerCallback("onRelationStatusChanged", "relationStatusChanged")
-    elseif Alliance() then
-        print("Alliance")
-        --Alliance():registerCallback("onRelationLevelChanged", "relationLevelChanged")
-        --Alliance():registerCallback("onRelationStatusChanged", "relationStatusChanged")
-    end]]
     isRegistered = true
 end
 
-function relationLevelChanged(playerIndex, factionIndex, relations)
-    print("relationLevelChanged", playerIndex, Faction(factionIndex).name, relations)
-end
-
-function relationStatusChanged(playerIndex, factionIndex, status)
-    local t = {}
-    t[RelationStatus.War]        = "War"
-    t[RelationStatus.Truce]        = "Truce"
-    t[RelationStatus.Neutral]    = "Neutral"
-    t[RelationStatus.Peace]        = "Peace"
-    t[RelationStatus.Allies]    = "Allies"
-
-    print("relationStatusChanged", playerIndex, Faction(factionIndex).name, t[status])
-end
-
 function unregisterSectorCallbacks(x,y)
-    if (sectorX == nil or sectorY == nil) and not isRegistered then return end
+    if sectorX == nil or sectorY == nil or not isRegistered then return end
+    if next(cc.squadsDocking) then return end   -- don't unregister when we still expect fighters to dock
     print("unregister")
-    cc.squadsDockingServer = false
     local sector = Sector(x,y)
     --orders
-    sector:unregisterCallback("onSquadOrdersChanged","squadOrdersChanged")
+    --sector:unregisterCallback("onSquadOrdersChanged","squadOrdersChanged")    --needed for docking
     --Fighter start and land
     sector:unregisterCallback("onFighterStarted","fighterStarted")
-    sector:unregisterCallback("onFighterLanded","fighterLanded")
+    --sector:unregisterCallback("onFighterLanded","fighterLanded")              --needed for docking
     -- Hangar management
     --fighters
     sector:unregisterCallback("onFighterAdded","fighterAdded")
@@ -124,16 +95,6 @@ function unregisterSectorCallbacks(x,y)
 
     sector:unregisterCallback("onEntityCreate", "entityCreate")
 
-    --relations
-    if Player() then
-        print(Entity().name, "Player")
-        Player():unregisterCallback("onRelationLevelChanged", "relationLevelChanged")
-        Player():unregisterCallback("onRelationStatusChanged", "relationStatusChanged")
-    elseif Alliance() then
-        print("Alliance")
-        --Alliance():unregisterCallback("onRelationLevelChanged", "relationLevelChanged")
-        --Alliance():unregisterCallback("onRelationStatusChanged", "relationStatusChanged")
-    end
     isRegistered = false
 end
 
@@ -174,61 +135,121 @@ end
 
 function squadOrdersChanged(entityId, squadIndex, orders, targetId)
     if Entity().index.number == entityId.number then
-        if onServer() then
-            broadcastInvokeClientFunction("squadOrdersChanged", entityId, squadIndex, orders, targetId)
-            for prefix, command in pairs(cc.commands) do
-                if command.squadOrdersChanged then command.squadOrdersChanged(entityId, squadIndex, orders, targetId) end
-            end
-        else
-            if cc.squadsDocking[squadIndex] and orders ~= FighterOrders.Return then
-                local prefix = cc.squadsDocking[squadIndex]
-                cc.squadsDocking[squadIndex] = nil
-                cc.applyCurrentAction(prefix, FighterOrders.Return, Entity().name, {})
-            end
+        if cc.squadsDocking[squadIndex] and orders ~= FighterOrders.Return then
+            local pref = getPrefOfSquad(squadIndex)
+            docking(pref, squadIndex, true)
+        elseif orders == FighterOrders.Return then
+            local pref = getPrefOfSquad(squadIndex)
+            docking(pref, squadIndex)
+        end
+        for prefix, command in pairs(cc.commands) do
+            if command.squadOrdersChanged then command.squadOrdersChanged(entityId, squadIndex, orders, targetId) end
         end
     end
 end
 
 function fighterStarted(entityId, squadIndex, fighterId)
-    if Entity(entityId).factionIndex ~= Entity().factionIndex then return end
-    if onServer() then cc.ownedStartedFighters[entityId.string] = cc.ownedStartedFighters[entityId.string] or {} end
-    local squadList = cc.ownedStartedFighters[entityId.string][squadIndex] or {}
-    squadList[fighterId.string] = 1
-    cc.ownedStartedFighters[entityId.string][squadIndex] = squadList
-    if Entity().index.number == entityId.number then
-        cc.thisCarrierStartedFighters[squadIndex] = squadList
+    if Entity(entityId).factionIndex == Entity().factionIndex then
+        cc.ownedStartedFighters[entityId.string] = cc.ownedStartedFighters[entityId.string] or {}
+        local squadList = cc.ownedStartedFighters[entityId.string][squadIndex] or {}
+        squadList[fighterId.string] = 1
+        cc.ownedStartedFighters[entityId.string][squadIndex] = squadList
+        if Entity().index.number == entityId.number then
+            cc.thisCarrierStartedFighters[squadIndex] = squadList
 
-        for prefix, command in pairs(cc.commands) do
-            if command.fighterStarted then command.fighterStarted(entityId, squadIndex, fighterId) end
+            for prefix, command in pairs(cc.commands) do
+                if command.fighterStarted then command.fighterStarted(entityId, squadIndex, fighterId) end
+            end
         end
     end
 end
 
 function fighterLanded(entityId, squadIndex, fighterId)
-    if Entity(entityId).factionIndex ~= Entity().factionIndex then return end
-    if onServer() then
-        if not cc.ownedStartedFighters[entityId.string] then
-            print(Entity().name, "faulty Carrier data", Entity(entityId).name)
-        elseif not cc.ownedStartedFighters[entityId.string][squadIndex] then
-            print(Entity().name, "faulty Squad", squadIndex)
-        elseif not cc.ownedStartedFighters[entityId.string][squadIndex][fighterId.string] then
-            print(Entity().name, "faulty fighter", fighterId.string)
-        else
+    if Entity(entityId).factionIndex == Entity().factionIndex then
+
+        if cc.ownedStartedFighters[entityId.string]
+        and cc.ownedStartedFighters[entityId.string][squadIndex]
+        and cc.ownedStartedFighters[entityId.string][squadIndex][fighterId.string] then
             cc.ownedStartedFighters[entityId.string][squadIndex][fighterId.string] = nil
         end
-    end
-    if Entity().index.number == entityId.number then
-        if onServer() then
-            if cc.thisCarrierStartedFighters[squadIndex][fighterId.string] then
+
+        if Entity().index.number == entityId.number then
+            if cc.thisCarrierStartedFighters[squadIndex]
+            and cc.thisCarrierStartedFighters[squadIndex][fighterId.string] then
                 cc.thisCarrierStartedFighters[squadIndex][fighterId.string] = nil
             end
-            broadcastInvokeClientFunction("fighterLanded", entityId, squadIndex, fighterId)
+            local pref = getPrefOfSquad(squadIndex)
+            docking(pref, squadIndex)
             for prefix, command in pairs(cc.commands) do
                 if command.fighterLanded then command.fighterLanded(entityId, squadIndex, fighterId) end
             end
-        else
-            if cc.squadsDocking[squadIndex] then
-                cc.applyCurrentAction(cc.squadsDocking[squadIndex], FighterOrders.Return, Entity().name, cc.squadsDocking)
+        end
+    end
+end
+
+function getPrefOfSquad(squad)
+    local prefixes = {}
+    for pref,command in pairs(cc.commands) do
+        if command.squads then
+            if command.squads[squad] then
+                prefixes[#prefixes+1] = pref
+            end
+        end
+    end
+    return unpack(prefixes)
+end
+
+function docking(prefix, squad, removeSquad)
+    if not squad then print(Entity().name, "no squad", prefix, removeSquad) return end
+
+    if removeSquad then
+        cc.squadsDocking[squad] = nil
+    else
+        if not cc.squadsDocking[squad] and prefix then
+            cc.squadsDocking[squad] = prefix
+        end
+    end
+    local isWorthSending = next(cc.squadsDocking) and not removeSquad
+    local fightersByPrefix = {}
+    for squad,pref in pairs(cc.squadsDocking) do    -- counting how many fighters are missing per squad
+        local hangar = Hangar(Entity().index)
+        fightersByPrefix[pref] = fightersByPrefix[pref] or {}
+        local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
+        fightersByPrefix[pref].numSquads = fightersByPrefix[pref].numSquads
+        if missingFighters > 0 then
+            fightersByPrefix[pref].numFighters = missingFighters + (fightersByPrefix[pref].numFighters or 0)
+            fightersByPrefix[pref].numSquads = (fightersByPrefix[pref].numSquads or 0) + 1
+        else    -- discard squads where all fighters are docked
+            cc.squadsDocking[squad] = nil
+            cc.commands[pref].squads[squad] = nil
+        end
+    end
+
+    if onServer() and isWorthSending then
+        broadcastInvokeClientFunction("docking", prefix, squad, removeSquad)
+        return
+    end
+
+    for pre, d in pairs(fightersByPrefix) do
+        local cmd = cc.commands[pre]
+
+        if cc.uiInitialized and cmd.statusPicture then
+            if d.numFighters and d.numFighters > 0 then
+                cmd.statusPicture.tooltip = string.format(cc.l.actionTostringMap[FighterOrders.Return], d.numFighters, d.numSquads, Entity().name)
+                if not cmd.active then cmd.statusPicture.color = cc.l.actionToColorMap[FighterOrders.Return] end
+            else
+                if not cmd.active then
+                    cmd.statusPicture.color = cc.l.actionToColorMap[-1]
+                    cmd.statusPicture.tooltip = cmd.inactiveTooltip
+                else
+                    if next(cmd.squads) then
+                        cmd.statusPicture.color = list.actionToColorMap[FighterOrders.Attack]
+                        cmd.statusPicture.tooltip = cmd.activeTooltip
+                    else
+                        cmd.statusPicture.color = cc.l.actionToColorMap["idle"]
+                        cmd.statusPicture.tooltip = cc.l.actionTostringMap["idle"]
+                    end
+                end
             end
         end
     end
@@ -269,14 +290,6 @@ end
 function onSectorChanged(x, y)
     for prefix, command in pairs(cc.commands) do
         if command.onSectorChanged then command.onSectorChanged(x, y) end
-    end
-end
-
-function relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore)
-    if indexA == Entity().factionIndex or indexB == Entity().factionIndex then
-        for prefix, command in pairs(cc.commands) do
-            if command.relationsChanged then command.relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore) end
-        end
     end
 end
 
@@ -358,27 +371,25 @@ function initUI()
     --cc.window.icon = "data/textures/icons/fighter.png" --Sad, does not work =( I want to change it from the puzzle piece icon to something else
 
     menu:registerWindow(cc.window, "Carrier Orders")
-
     local tabbedWindow = cc.window:createTabbedWindow(Rect(vec2(10, 10), size - 10))
-
     local tab = tabbedWindow:createTab("Entity", "data/textures/icons/fighter.png", "Ship Commands")
+
     numButtons = 0
-
-
-
     local sortedPrefixes = {}
     for k in pairs(cc.Config.carrierScripts) do table.insert(sortedPrefixes, k) end
     table.sort(sortedPrefixes)
     for _,prefix in ipairs(sortedPrefixes) do
         local command = cc.commands[prefix]
-        local button = tab:createButton(ButtonRect(), command.inactiveButtonCaption, "buttonActivate")
-        local pic = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
-        pic.isIcon = true
-        pic.tooltip = "Not doing anything."
-        pic.color = ColorRGB(0.3, 0.3, 0.3)
-        cc.buttons[button.index] = prefix
-        command.activationButton = button
-        command.statusPicture = pic
+        if command.needsButton then
+            local button = tab:createButton(ButtonRect(), command.inactiveButtonCaption, "buttonActivate")
+            local pic = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
+            pic.isIcon = true
+            pic.tooltip = "Not doing anything."
+            pic.color = ColorRGB(0.3, 0.3, 0.3)
+            cc.buttons[button.index] = prefix
+            command.activationButton = button
+            command.statusPicture = pic
+        end
     end
 
     cc.autoAssignButton = tab:createButton(ButtonRect(), "Carrier - Auto Assign", "autoAssign")
@@ -422,16 +433,6 @@ function updateServer(timestep)
     for prefix, command in pairs(cc.commands) do
         if command.updateServer then command.updateServer(timestep) end
     end
-end
-
-function updateClient(timestep)
-
-end
-
-if onClient() then
-function getUpdateInterval()
-  return 1
-end
 end
 
 function cc.addOrdersToCombo(comboBox)
@@ -481,7 +482,6 @@ function receiveSettings(pSettings, activeCommands, pSectorChange)
             --activate UI
             buttonActivate(cc.commands[prefix].activationButton)
         end
-    else
     end
 end
 
@@ -508,89 +508,28 @@ end
 function applyCurrentAction(prefix, action, ...)
      cc.applyCurrentAction(prefix, action, ...)
  end
-
+-- sets the icon and text for the specified prefix
 function cc.applyCurrentAction(prefix, action, ...)
-
+    local command = cc.commands[prefix]
+    if not command then print(prefix,"is invalid command") return end
     if onServer() then
-        if action == FighterOrders.Return then cc.squadsDockingServer = true; registerSectorCallbacks() end
         broadcastInvokeClientFunction("applyCurrentAction", prefix, action, ...)
         return
     end
-    local args = {...}
-    local command = cc.commands[prefix]
-    if not command then print(prefix,"pic-pinning failed") return end
-    if action == FighterOrders.Return then
-        cc.squadsDockingServer = true
-        local fightersByPrefix = {}
-        for squad,_ in pairs(args[2]) do    --  adding squads to watch for docking and remember which command requested it
-            if not cc.squadsDocking[squad] then
-                cc.squadsDocking[squad] = prefix
-            end
-        end
-        for squad,_ in pairs(cc.squadsDocking) do    -- counting how many fighters are missing per squad
-            local hangar = Hangar(Entity().index)
-            local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
-            if missingFighters > 0 and cc.squadsDocking[squad] then
-                fightersByPrefix[cc.squadsDocking[squad]] = (fightersByPrefix[cc.squadsDocking[squad]] or 0) + missingFighters
-            else
-                fightersByPrefix[cc.squadsDocking[squad]] = (fightersByPrefix[cc.squadsDocking[squad]] or 0)
-                cc.squadsDocking[squad] = nil
-            end
-        end
-        if next(fightersByPrefix) then
-            for pre, totalMissing in pairs(fightersByPrefix) do
-                local cmd = cc.commands[pre]
-                if totalMissing == 0 then
-                    if not cmd.active then
-                        cmd.statusPicture.color = cc.l.actionToColorMap[-1]
-                        cmd.statusPicture.tooltip = cc.l.actionTostringMap[-1]
-                    else
-                        cmd.statusPicture.tooltip = cmd.activeTooltip
-                    end
-                else
-                    cmd.statusPicture.tooltip = string.format(cc.l.actionTostringMap[action], totalMissing, getSquadNumByPrefix(pre), unpack(args))
-                    if not cmd.active then cmd.statusPicture.color = cc.l.actionToColorMap[action] end
-                end
-            end
+    if cc.uiInitialized and command.statusPicture then
+        if action == FighterOrders.Return then
+            -- handled by events
         else
-            if not command.active then
-                command.statusPicture.color = cc.l.actionToColorMap[-1]
-                command.statusPicture.tooltip = cc.l.actionTostringMap[-1]
-            else
-                command.statusPicture.tooltip = command.activeTooltip
-            end
-
-        end
-        print("in apply action", next(cc.squadsDocking),cc.numActiveCommands)
-        if not next(cc.squadsDocking) then
-            if cc.numActiveCommands <= 0 then
-                print("in apply action")
-                invokeServerFunction("unregisterSectorCallbacks", Sector():getCoordinates())
-                print("----")
-            end
-        elseif cc.squadsDockingServer then
-        end
-    else
-        if uiInitialized then
+            local args = {...}
             command.statusPicture.tooltip = string.format(cc.l.actionTostringMap[action], unpack(args))
             command.statusPicture.color = cc.l.actionToColorMap[action]
-        end
-    end
-end
 
-function getSquadNumByPrefix(prefix)
-    local num = 0
-    for squad,listPrefix in pairs(cc.squadsDocking)do
-        if listPrefix == prefix then
-            num = num + 1
         end
     end
-    return num
 end
 
 function buttonActivate(button)
     cc.numActiveCommands = cc.numActiveCommands + 1
-    print("Activate numActiveCommands", cc.numActiveCommands)
     if onClient() then
         local prefix = cc.buttons[button.index]
         invokeServerFunction("buttonActivate", prefix)
@@ -615,12 +554,10 @@ end
 
 function buttonDeactivate(button)
     cc.numActiveCommands = cc.numActiveCommands - 1
-    if cc.numActiveCommands < 0 then print("<0") cc.numActiveCommands = 0 end
-    print("Deactivate numActiveCommands", cc.numActiveCommands)
+    if cc.numActiveCommands < 0 then cc.numActiveCommands = 0 end
     if onClient() then
         local prefix = cc.buttons[button.index]
 
-        print("Deactivate numActiveCommands", cc.numActiveCommands)
         invokeServerFunction("buttonDeactivate", prefix)
         local pic = cc.commands[prefix].statusPicture
         pic.color = ColorRGB(0.3, 0.3, 0.3)
@@ -636,11 +573,7 @@ function buttonDeactivate(button)
     cc.commands[button].active = false
     cc.commands[button].deactivate(button)
     if cc.numActiveCommands == 0 then
-        if not cc.squadsDockingServer then
-            print("on deactivate")
-            unregisterSectorCallbacks(Sector():getCoordinates())
-            print("----")
-        end
+        unregisterSectorCallbacks(Sector():getCoordinates())
     else
 
     end
@@ -663,7 +596,6 @@ function autoAssign()
 end
 
 function StopAutoAssign()
-    cc.squadsDockingServer = true
     if onClient() then
         invokeServerFunction("StopAutoAssign")
         cc.autoAssignPicture.color = ColorRGB(0.3, 0.3, 0.3)
@@ -731,7 +663,6 @@ function restore(dataIn)    --might be called onSectorEntered
     local activeList = dataIn.activeList or {}
     for _,prefix in pairs(activeList) do
         if cc.commands[prefix] and not cc.commands[prefix].active then
-            print(Entity().name, prefix, "activate")
             cc.commands[prefix].active = true
             --buttonActivate(prefix)
         end
