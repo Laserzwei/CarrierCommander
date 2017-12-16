@@ -23,16 +23,16 @@ end
 
 function salvageCommand.initConfigUI(scrollframe, pos, size)
     local label = scrollframe:createLabel(pos, "Salvaging config", 15)
-	label.tooltip = "Set the behaviour once the Salvaging-operation ends"
-	label.fontSize = 15
-	label.font = FontType.Normal
-	label.size = vec2(size.x-20, 35)
-	pos = pos + vec2(0,35)
+    label.tooltip = "Set the behaviour once the Salvaging-operation ends"
+    label.fontSize = 15
+    label.font = FontType.Normal
+    label.size = vec2(size.x-20, 35)
+    pos = pos + vec2(0,35)
 
-	local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-	cc.l.uiElementToSettingMap[comboBox.index] = "salvageStopOrder"
-	cc.addOrdersToCombo(comboBox)
-	pos = pos + vec2(0,35)
+    local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
+    cc.l.uiElementToSettingMap[comboBox.index] = "salvageStopOrder"
+    cc.addOrdersToCombo(comboBox)
+    pos = pos + vec2(0,35)
 
     return pos
 end
@@ -53,14 +53,16 @@ function wreckageDestroyed(index, lastDamageInflictor)
     if salvageCommand.findWreckage() then
         salvageCommand.salvage()
     else
-        cc.applyCurrentAction(salvageCommand.prefix, -2)
+        cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
     end
 end
 
 function salvageCommand.salvage()
     if not valid(salvageCommand.salvagableWreck) then
-        print("in salvage(), invalid wreckage get")
-        if not salvageCommand.findWreckage() then cc.applyCurrentAction(salvageCommand.prefix, -2) return end
+        if not salvageCommand.findWreckage() then
+            cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
+            return
+        end
     end
     local numSquads = 0
     local hangar = Hangar(Entity().index)
@@ -120,16 +122,16 @@ function salvageCommand.findWreckage()
 
     local asteroids = {sector:getEntitiesByType(EntityType.Wreckage)}
     local nearest = math.huge
-	--Go after closest wreckage first
+    --Go after closest wreckage first
     for _, w in pairs(asteroids) do
-		local resources = w:getMineableResources()
+        local resources = w:getMineableResources()
         if resources ~= nil and resources > 25 then
-			local dist = distance2(w.translationf, ship.translationf)
-			if dist < nearest then
-				nearest = dist
-				salvageCommand.salvagableWreck = w
-			end
-		end
+            local dist = distance2(w.translationf, ship.translationf)
+            if dist < nearest then
+                nearest = dist
+                salvageCommand.salvagableWreck = w
+            end
+        end
     end
 
     if valid(salvageCommand.salvagableWreck) then
@@ -196,6 +198,8 @@ function salvageCommand.onSectorChanged(x, y)
         if salvageCommand.findWreckage() then
             salvageCommand.getSquadsToManage()
             salvageCommand.salvage()
+        else
+            cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
         end
     end
 end

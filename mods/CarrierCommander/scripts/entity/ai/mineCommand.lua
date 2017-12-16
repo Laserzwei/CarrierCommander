@@ -23,16 +23,23 @@ end
 
 function mineCommand.initConfigUI(scrollframe, pos, size)
     local label = scrollframe:createLabel(pos, "Mining config", 15)
-	label.tooltip = "Set the behaviour once the Mining-operation ends"
-	label.fontSize = 15
-	label.font = FontType.Normal
-	label.size = vec2(size.x-20, 35)
-	pos = pos + vec2(0,35)
+    label.tooltip = "Set the behaviour once the Mining-operation ends"
+    label.fontSize = 15
+    label.font = FontType.Normal
+    label.size = vec2(size.x-20, 35)
+    pos = pos + vec2(0,35)
 
-	local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-	cc.l.uiElementToSettingMap[comboBox.index] = "mineStopOrder"
-	cc.addOrdersToCombo(comboBox)
-	pos = pos + vec2(0,35)
+    local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
+    cc.l.uiElementToSettingMap[comboBox.index] = "mineStopOrder"
+    cc.addOrdersToCombo(comboBox)
+    pos = pos + vec2(0,35)
+
+    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine all Asteroids", "onCheckBoxChecked")
+    cc.l.uiElementToSettingMap[checkBox.index] = "mineAllSetting"
+    checkBox.tooltip = "Determines wether all asteroids in a sector (checkded), \nor only resource asteroids (unchecked) will be mined."
+    checkBox.captionLeft = false
+    checkBox.fontSize = 14
+    pos = pos + vec2(0,35)
 
     return pos
 end
@@ -53,14 +60,16 @@ function asteroidDestroyed(index, lastDamageInflictor)
     if mineCommand.findMinableAsteroid() then
         mineCommand.mine()
     else
-        cc.applyCurrentAction(mineCommand.prefix, -2)
+        cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
     end
 end
 
 function mineCommand.mine()
     if not valid(mineCommand.minableAsteroid) then
-        print("in mine(), invalid asteroid get")
-        if not mineCommand.findMinableAsteroid() then cc.applyCurrentAction(mineCommand.prefix, -2) return end
+        if not mineCommand.findMinableAsteroid() then
+            cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
+            return
+        end
     end
     local numSquads = 0
     local hangar = Hangar(Entity().index)
@@ -120,16 +129,16 @@ function mineCommand.findMinableAsteroid()
 
     local asteroids = {sector:getEntitiesByType(EntityType.Asteroid)}
     local nearest = math.huge
-	--Go after closest asteroids first
+    --Go after closest asteroids first
     for _, a in pairs(asteroids) do
-		local resources = a:getMineableResources()
-        if resources ~= nil and resources > 0 then
-			local dist = distance2(a.translationf, ship.translationf)
-			if dist < nearest then
-				nearest = dist
-				mineCommand.minableAsteroid = a
-			end
-		end
+        local resources = a:getMineableResources()
+        if (resources ~= nil and resources > 0) or cc.settings["mineAllSetting"] then
+            local dist = distance2(a.translationf, ship.translationf)
+            if dist < nearest then
+                nearest = dist
+                mineCommand.minableAsteroid = a
+            end
+        end
     end
 
     if valid(mineCommand.minableAsteroid) then
@@ -196,6 +205,8 @@ function mineCommand.onSectorChanged(x, y)
         if mineCommand.findMinableAsteroid() then
             mineCommand.getSquadsToManage()
             mineCommand.mine()
+        else
+            cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
         end
     end
 end

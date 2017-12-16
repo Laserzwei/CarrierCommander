@@ -39,23 +39,23 @@ end]]
 function aggressiveCommand.initConfigUI(scrollframe, pos, size)
 
     local label = scrollframe:createLabel(pos, "Attack config", 15)
-	label.tooltip = "Set the behaviour once the Attack-operation ends"
-	label.fontSize = 15
-	label.font = FontType.Normal
-	label.size = vec2(size.x-20, 35)
-	pos = pos + vec2(0,35)
+    label.tooltip = "Set the behaviour once the Attack-operation ends"
+    label.fontSize = 15
+    label.font = FontType.Normal
+    label.size = vec2(size.x-20, 35)
+    pos = pos + vec2(0,35)
 
-	local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-	cc.l.uiElementToSettingMap[comboBox.index] = "attackStopOrder"
-	cc.addOrdersToCombo(comboBox)
-	pos = pos + vec2(0,35)
+    local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
+    cc.l.uiElementToSettingMap[comboBox.index] = "attackStopOrder"
+    cc.addOrdersToCombo(comboBox)
+    pos = pos + vec2(0,35)
     --attack Civils
-    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Spare Civils", "onCheckBoxChecked")
+    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Attack Civils", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."spareCivilsSetting"
-	checkBox.tooltip = "Determines wether enemy civil ships will be attacked (checkded), or not (unchecked)"
+    checkBox.tooltip = "Determines wether enemy civil ships will be attacked (checkded), or not (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
-	pos = pos + vec2(0,35)
+    pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Attack Stations", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackStations"
@@ -92,7 +92,7 @@ end
 
 function aggressiveCommand.attack()
     if not valid(aggressiveCommand.enemyTarget) then
-        if not aggressiveCommand.findEnemy() then cc.applyCurrentAction(aggressiveCommand.prefix, -2) return end
+        if not aggressiveCommand.findEnemy() then print("invalid attack target"); cc.applyCurrentAction(aggressiveCommand.prefix, -2) return end
     end
     local numSquads = 0
     local hangar = Hangar(Entity().index)
@@ -148,33 +148,38 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
     local shipAI = ShipAI(Entity().index)
     if shipAI:isEnemyPresent(aggressiveCommand.hostileThreshold) then
         local ship = Entity()
-		local oldEnemy = aggressiveCommand.enemyTarget
+        local oldEnemy = aggressiveCommand.enemyTarget
 
-		if ignoredEntityIndex then
+        if not aggressiveCommand.checkEnemy(oldEnemy, ignoredEntityIndex) then
+            aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
+            oldEnemy = nil
+        end
+
+        if ignoredEntityIndex then
             if ignoredEntityIndex.number and aggressiveCommand.enemyTarget and aggressiveCommand.enemyTarget.index.number then
                 aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
                 oldEnemy = nil
             end
-		end
+        end
 
-		local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
+        local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         --local entities = {Sector():getEntities()}
-		local nearest = math.huge
-		local priority = 0
-		if oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
+        local nearest = math.huge
+        local priority = 0
+        if oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
         local hasTargetChanged = false
-		for _, e in pairs(entities) do
-			if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
-				local p = aggressiveCommand.getPriority(e)
-				local dist = distance2(e.translationf, ship.translationf)
-				if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
-					nearest = dist
-					aggressiveCommand.enemyTarget = e
-					priority = p
+        for _, e in pairs(entities) do
+            if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
+                local p = aggressiveCommand.getPriority(e)
+                local dist = distance2(e.translationf, ship.translationf)
+                if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
+                    nearest = dist
+                    aggressiveCommand.enemyTarget = e
+                    priority = p
                     hasTargetChanged = true
-				end
-			end
-		end
+                end
+            end
+        end
 
         if valid(aggressiveCommand.enemyTarget) then print(" FE Enemy", aggressiveCommand.enemyTarget.name, aggressiveCommand.enemyTarget.durability, hasTargetChanged) end
         if valid(aggressiveCommand.enemyTarget) then
@@ -193,15 +198,15 @@ end
 
 function aggressiveCommand.getPriority(entity)
     if not valid(entity) then return -1 end
-	local p = 0
+    local p = 0
 
-	if(entity.isShip) then p = cc.Config.Settings.Aggressive.priorities.ship
-	elseif entity.isStation and cc.Config.Settings.Aggressive.attackStations then p = cc.Config.Settings.Aggressive.priorities.station
-	elseif entity.isFighter and cc.Config.Settings.Aggressive.attackFighters then p = cc.Config.Settings.Aggressive.priorities.fighter
-	else p = -1 end -- do not attack other entities
-	if entity:hasScript("story/wormholeguardian.lua") then p = 15 end -- Lets kill adds first, then the guardian
+    if(entity.isShip) then p = cc.Config.Settings.Aggressive.priorities.ship
+    elseif entity.isStation and cc.Config.Settings.Aggressive.attackStations then p = cc.Config.Settings.Aggressive.priorities.station
+    elseif entity.isFighter and cc.Config.Settings.Aggressive.attackFighters then p = cc.Config.Settings.Aggressive.priorities.fighter
+    else p = -1 end -- do not attack other entities
+    if entity:hasScript("story/wormholeguardian.lua") then p = 15 end -- Lets kill adds first, then the guardian
 
-	return p
+    return p
 end
 --checks for hostility, xsotan ownership, civil-config, station-config
 function aggressiveCommand.checkEnemy(e, ignored)
@@ -209,16 +214,17 @@ function aggressiveCommand.checkEnemy(e, ignored)
     if ignored and e.index.number == ignored.number then return false end
     local faction = Faction()
     local b = false
-	if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then b = true -- low faction
-	elseif e.factionIndex == aggressiveCommand.xsotanFactionIndex then b = true end-- xsotan ship
-    if e:getValue("civil") and cc.settings[aggressiveCommand.prefix.."spareCivilsSetting"] then
+    if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then b = true -- low faction
+    elseif e.factionIndex == aggressiveCommand.xsotanFactionIndex then b = true end-- xsotan ship
+    if e:getValue("civil") and not cc.settings[aggressiveCommand.prefix.."spareCivilsSetting"] then
         b = false
     end
-    if cc.settings[aggressiveCommand.prefix.."attackStations"] and e.isStation then
+    if e.isStation and not cc.settings[aggressiveCommand.prefix.."attackStations"] then
+
         b = false
     end
 
-	return b
+    return b
 end
 
 function aggressiveCommand.setSquadsIdle()
@@ -286,6 +292,7 @@ end
 function aggressiveCommand.relationsChanged(indexA, indexB, relations, status, relationsBefore, statusBefore)
     if aggressiveCommand.active then
         if relations <= aggressiveCommand.hostileThreshold then
+            print("onrealtionchanged", Faction(indexA).name, Faction(indexB).name, relations, status, relationsBefore, statusBefore)
             if aggressiveCommand.findEnemy() then
                 aggressiveCommand.attack()
             end
@@ -295,16 +302,22 @@ end
 
 function aggressiveCommand.flyableCreated(entity)
     if aggressiveCommand.active then
-        if aggressiveCommand.checkEnemy(entity) then
-            local ship = Entity()
+        if aggressiveCommand.enemyTarget then
+            if aggressiveCommand.checkEnemy(entity) then
+                local ship = Entity()
 
-            local prioCurrent = aggressiveCommand.getPriority(aggressiveCommand.enemyTarget)
-            local distCurrent = distance2(aggressiveCommand.enemyTarget.translationf, ship.translationf)
+                local prioCurrent = aggressiveCommand.getPriority(aggressiveCommand.enemyTarget)
+                local distCurrent = distance2(aggressiveCommand.enemyTarget.translationf, ship.translationf)
 
-            local prioNew = aggressiveCommand.getPriority(entity)
-            local distNew = distance2(entity.translationf, ship.translationf)
-            if ((distNew < distCurrent and prioCurrent <= prioNew) or (prioCurrent < prioNew)) then
-                aggressiveCommand.enemyTarget = entity
+                local prioNew = aggressiveCommand.getPriority(entity)
+                local distNew = distance2(entity.translationf, ship.translationf)
+                if ((distNew < distCurrent and prioCurrent <= prioNew) or (prioCurrent < prioNew)) then
+                    aggressiveCommand.enemyTarget = entity
+                    aggressiveCommand.attack()
+                end
+            end
+        else
+            if aggressiveCommand.findEnemy() then
                 aggressiveCommand.attack()
             end
         end

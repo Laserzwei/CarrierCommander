@@ -40,15 +40,14 @@ end
 --<button> is clicked button-Object onClient and prefix onServer
 function dockAll.activate(button)
     cc.commands[dockAll.prefix].active = false
+    cc.numActiveCommands = cc.numActiveCommands - 1
     if onClient() then
         local pic = cc.commands[dockAll.prefix].statusPicture
         --pic.color = ColorRGB(0.3, 0.3, 0.3)
         pic.tooltip = cc.commands[dockAll.prefix].inactiveTooltip
-		button.caption = cc.commands[dockAll.prefix].inactiveButtonCaption
-		button.onPressedFunction = "buttonActivate"
-        for prefix,command in pairs(cc.commands) do
-			if command.deactivate then buttonDeactivate(command.activationButton) end
-		end
+        button.caption = cc.commands[dockAll.prefix].inactiveButtonCaption
+        button.onPressedFunction = "buttonActivate"
+        buttonDeactivate(cc.commands[dockAll.prefix].activationButton)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
@@ -56,13 +55,20 @@ end
 
 --<button> is clicked button-Object onClient and prefix onServer
 function dockAll.deactivate(button)
+    cc.numActiveCommands = cc.numActiveCommands + 1
     if onClient() then
+        for prefix,command in pairs(cc.commands) do
+            if prefix ~= dockAll.prefix and command.active then
+                if command.deactivate then buttonDeactivate(command.activationButton) end
+            end
+        end
         return
     end
     -- space for stuff to do e.g. landing your fighters/emptying: dockAll.squads = {} / dockAll.startedFighters = {}
     -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string prefix,key action,...), where ... are string.format-able objects
+    cc.squadsDockingServer = true
     local ai = ShipAI()
-	ai:setIdle()
+    ai:setIdle()
 
     dockAll.getSquadsToManage()
     dockAll.dockAllFighters()

@@ -13,9 +13,9 @@ Config.version = {
 
 --new commands go here, <unique prefix> = {name = <filneme without .lua>, <path> = relative path from the /mods/-folder }
 Config.carrierScripts = {
-	salvage = {name="salvageCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
-	mine = {name="mineCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
-	attack = {name="aggressiveCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
+    salvage = {name="salvageCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
+    mine = {name="mineCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
+    attack = {name="aggressiveCommand", path = "mods/CarrierCommander/scripts/entity/ai/"},
     dockAll = {name="dockAllFighters", path = "mods/CarrierCommander/scripts/entity/ai/"},
     --dummyCommand = {name="dummyCommand", path = "mods/dummyCarrierCommands/scripts/entity/ai/"}
 }
@@ -24,15 +24,15 @@ Config.carrierScripts = {
 Config.Settings = {}
 
 Config.Settings.Aggressive = {
-	attackStations = true,		-- Defines if stations should be attacked. Possible values: true, false; Default: true
-	attackFighters = true,		-- Defines if fighters should be attacked. Possible values: true, false; Default: true
+    attackStations = true,        -- Defines if stations should be attacked. Possible values: true, false; Default: true
+    attackFighters = true,        -- Defines if fighters should be attacked. Possible values: true, false; Default: true
 
-	priorities = {
-		ship = 20,
-		guardian = 15,
-		station = 10,
-		fighter = 5,
-	}
+    priorities = {
+        ship = 20,
+        guardian = 15,
+        station = 10,
+        fighter = 5,
+    }
 }
 
 return Config
