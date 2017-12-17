@@ -176,13 +176,19 @@ Some default actions and colors are stored in /scripts/lib/lists.lua
 cc.l.tooltipadditions[template.prefix] = "+ templating around"
 cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
 
-Get Number of Fighters in Squad "squad", excludingstarted fighters:
+- Get Number of Fighters in Squad "squad", excludingstarted fighters:
 local numFighters = hangar:getSquadFighters(squad)
 
-Get Number of Fighters in Squad "squad", regardless if started or in hangar:
+- Get Number of Fighters in Squad "squad", regardless if started or in hangar:
 local numFighters = 12 - hangar:getSquadFreeSlots(squad)
 
-Get number of Fighters in Squad "squad" that are started:
+- Get number of Fighters in Squad "squad" that are started:
 local numFighters = (12 - hangar:getSquadFreeSlots(squad)) - hangar:getSquadFighters(squad)
 
-Activate dummyCommand in /mods/CarrierCommander/config/CarrierCommanderConfig.lua to see all the events printed to the console, as well as cyclic docking and undocking
+- To send data to the clientside of your plugin, you can use broadcastInvokeClientFunction(), make sure it has
+a unique functionName and DON'T put "template." infront.
+
+- Sometimes it's necessary to register your additional Callbacks (e.g. to get called when a specific entity gets destroyed[see mineCommand.lua]), make sure to choose
+a unique functionName and DON'T put "template." infront.
+
+- Activate dummyCommand in /mods/CarrierCommander/config/CarrierCommanderConfig.lua to see all the events printed to the console, as well as cyclic docking and undocking
