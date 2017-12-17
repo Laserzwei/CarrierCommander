@@ -185,74 +185,6 @@ function fighterLanded(entityId, squadIndex, fighterId)
     end
 end
 
-function getPrefOfSquad(squad)
-    local prefixes = {}
-    for pref,command in pairs(cc.commands) do
-        if command.squads then
-            if command.squads[squad] then
-                prefixes[#prefixes+1] = pref
-            end
-        end
-    end
-    return unpack(prefixes)
-end
-
-function docking(prefix, squad, removeSquad)
-    if not squad then print(Entity().name, "no squad", prefix, removeSquad) return end
-
-    if removeSquad then
-        cc.squadsDocking[squad] = nil
-    else
-        if not cc.squadsDocking[squad] and prefix then
-            cc.squadsDocking[squad] = prefix
-        end
-    end
-    local isWorthSending = next(cc.squadsDocking) and not removeSquad
-    local fightersByPrefix = {}
-    for squad,pref in pairs(cc.squadsDocking) do    -- counting how many fighters are missing per squad
-        local hangar = Hangar(Entity().index)
-        fightersByPrefix[pref] = fightersByPrefix[pref] or {}
-        local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
-        fightersByPrefix[pref].numSquads = fightersByPrefix[pref].numSquads
-        if missingFighters > 0 then
-            fightersByPrefix[pref].numFighters = missingFighters + (fightersByPrefix[pref].numFighters or 0)
-            fightersByPrefix[pref].numSquads = (fightersByPrefix[pref].numSquads or 0) + 1
-        else    -- discard squads where all fighters are docked
-            cc.squadsDocking[squad] = nil
-            cc.commands[pref].squads[squad] = nil
-        end
-    end
-
-    if onServer() and isWorthSending then
-        broadcastInvokeClientFunction("docking", prefix, squad, removeSquad)
-        return
-    end
-
-    for pre, d in pairs(fightersByPrefix) do
-        local cmd = cc.commands[pre]
-
-        if cc.uiInitialized and cmd.statusPicture then
-            if d.numFighters and d.numFighters > 0 then
-                cmd.statusPicture.tooltip = string.format(cc.l.actionTostringMap[FighterOrders.Return], d.numFighters, d.numSquads, Entity().name)
-                if not cmd.active then cmd.statusPicture.color = cc.l.actionToColorMap[FighterOrders.Return] end
-            else
-                if not cmd.active then
-                    cmd.statusPicture.color = cc.l.actionToColorMap[-1]
-                    cmd.statusPicture.tooltip = cmd.inactiveTooltip
-                else
-                    if next(cmd.squads) then
-                        cmd.statusPicture.color = list.actionToColorMap[FighterOrders.Attack]
-                        cmd.statusPicture.tooltip = cmd.activeTooltip
-                    else
-                        cmd.statusPicture.color = cc.l.actionToColorMap["idle"]
-                        cmd.statusPicture.tooltip = cc.l.actionTostringMap["idle"]
-                    end
-                end
-            end
-        end
-    end
-end
-
 function fighterAdded(entityId, squadIndex, fighterIndex, landed)
     if Entity().index.number == entityId.number then
         for prefix, command in pairs(cc.commands) do
@@ -479,6 +411,74 @@ function receiveSettings(pSettings, activeCommands, pSectorChange)
         for prefix,_ in pairs(activeCommands) do
             --activate UI
             buttonActivate(cc.commands[prefix].activationButton)
+        end
+    end
+end
+
+function getPrefOfSquad(squad)
+    local prefixes = {}
+    for pref,command in pairs(cc.commands) do
+        if command.squads then
+            if command.squads[squad] then
+                prefixes[#prefixes+1] = pref
+            end
+        end
+    end
+    return unpack(prefixes)
+end
+
+function docking(prefix, squad, removeSquad)
+    if not squad then print(Entity().name, "no squad", prefix, removeSquad) return end
+
+    if removeSquad then
+        cc.squadsDocking[squad] = nil
+    else
+        if not cc.squadsDocking[squad] and prefix then
+            cc.squadsDocking[squad] = prefix
+        end
+    end
+    local isWorthSending = next(cc.squadsDocking) and not removeSquad
+    local fightersByPrefix = {}
+    for squad,pref in pairs(cc.squadsDocking) do    -- counting how many fighters are missing per squad
+        local hangar = Hangar(Entity().index)
+        fightersByPrefix[pref] = fightersByPrefix[pref] or {}
+        local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
+        fightersByPrefix[pref].numSquads = fightersByPrefix[pref].numSquads
+        if missingFighters > 0 then
+            fightersByPrefix[pref].numFighters = missingFighters + (fightersByPrefix[pref].numFighters or 0)
+            fightersByPrefix[pref].numSquads = (fightersByPrefix[pref].numSquads or 0) + 1
+        else    -- discard squads where all fighters are docked
+            cc.squadsDocking[squad] = nil
+            cc.commands[pref].squads[squad] = nil
+        end
+    end
+
+    if onServer() and isWorthSending then
+        broadcastInvokeClientFunction("docking", prefix, squad, removeSquad)
+        return
+    end
+
+    for pre, d in pairs(fightersByPrefix) do
+        local cmd = cc.commands[pre]
+
+        if cc.uiInitialized and cmd.statusPicture then
+            if d.numFighters and d.numFighters > 0 then
+                cmd.statusPicture.tooltip = string.format(cc.l.actionTostringMap[FighterOrders.Return], d.numFighters, d.numSquads, Entity().name)
+                if not cmd.active then cmd.statusPicture.color = cc.l.actionToColorMap[FighterOrders.Return] end
+            else
+                if not cmd.active then
+                    cmd.statusPicture.color = cc.l.actionToColorMap[-1]
+                    cmd.statusPicture.tooltip = cmd.inactiveTooltip
+                else
+                    if next(cmd.squads) then
+                        cmd.statusPicture.color = list.actionToColorMap[FighterOrders.Attack]
+                        cmd.statusPicture.tooltip = cmd.activeTooltip
+                    else
+                        cmd.statusPicture.color = cc.l.actionToColorMap["idle"]
+                        cmd.statusPicture.tooltip = cc.l.actionTostringMap["idle"]
+                    end
+                end
+            end
         end
     end
 end

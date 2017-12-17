@@ -90,7 +90,7 @@ end
 
 function dummyCommand.getAllMyFightersCalled()
     if dummyCommand.active then
-        --print("allFightersCalled")
+        print("allFightersCalled")
     end
 end
 
@@ -127,32 +127,32 @@ end
 function dummyCommand.fighterStarted(entityId, squadIndex, fighterId)
     if dummyCommand.active then
         local fighter = Entity(fighterId)
-        --print("Cargo space",fighter.maxCargoSpace)
+        print("Cargo space",fighter.maxCargoSpace)
     	local fAI = FighterAI(fighterId)
     	if fAI then
-    		--print(Entity().name, "fighter started squad", squadIndex, cc.l.actionTostringMap[fAI.orders])
+    		print(Entity().name, "fighter started squad", squadIndex, cc.l.actionTostringMap[fAI.orders])
     	else
-    	    --print(Entity().name, "fighter started squad", squadIndex, Entity(fighterId).name)
+    	    print(Entity().name, "fighter started squad", squadIndex, Entity(fighterId).name)
     	end
     end
 end
 
 function dummyCommand.fighterLanded(entityId, squadIndex, fighterId)
     if dummyCommand.active then
-        --print(Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
+        print(Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
     end
 end
 
 function dummyCommand.fighterAdded(entityId, squadIndex, fighterIndex, landed)
     if dummyCommand.active then
         local hangar = Hangar(Entity().index)
-	       --print(Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed, hangar:getFighter(squadIndex, fighterIndex).weaponName)
+	       print(Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed, hangar:getFighter(squadIndex, fighterIndex).weaponName)
     end
 end
 
 function dummyCommand.fighterRemove(entityId, squadIndex, fighterIndex, started) --entityTemplate is not accessable, even though it's supposed to be called BEFORE the fighter gets removed
     if dummyCommand.active then
-        --print(Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
+        print(Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
     end
 end
 
@@ -162,7 +162,7 @@ function dummyCommand.squadAdded(entityId, index)-- gets also called on squadRen
             dummyCommand.getSquadsToManage()
         end
     	local hangar = Hangar(Entity().index)
-    	--print(Entity().name, "Squad Changed, added", index, hangar:getSquadName(index))
+    	print(Entity().name, "Squad Changed, added", index, hangar:getSquadName(index))
     end
 end
 -- Notice: The squad with <index> is not available in the Hangar when this is fired
@@ -171,13 +171,13 @@ function dummyCommand.squadRemove(entityId, index)
         if index == dummyCommand.squads then
             dummyCommand.getSquadsToManage()
         end
-	--print(Entity().name, "Squad Changed, remove", index)
+	print(Entity().name, "Squad Changed, remove", index)
     end
 end
 
 function dummyCommand.onSectorChanged(x, y)
     if dummyCommand.active then
-        --print("SectorChanged")
+        print("SectorChanged")
     end
 end
 
@@ -194,6 +194,7 @@ function dummyCommand.activate(button)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    dummyCommand.squads = {}
     dummyCommand.starting = false
     dummyCommand.getSquadsToManage()
 end
@@ -205,10 +206,9 @@ function dummyCommand.deactivate(button)
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
         return
     end
-    -- space for stuff to do e.g. landing your fighters/emptying: dummyCommand.squads = {} / dummyCommand.startedFighters = {}
-    -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string prefix,key action,...), where ... are string.format-able objects
+    -- space for stuff to do e.g. landing your fighters
+    -- When docking: Make sure to not reset template.squads
     cc.applyCurrentAction(dummyCommand.prefix, dummyCommand.setSquadsIdle())
-    dummyCommand.squads = {}
 end
 
 return dummyCommand

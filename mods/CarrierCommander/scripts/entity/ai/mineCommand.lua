@@ -239,8 +239,8 @@ function mineCommand.deactivate(button)
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
         return
     end
-    -- space for stuff to do e.g. landing your fighters/emptying: mineCommand.squads = {} / mineCommand.startedFighters = {}
-    -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string mineCommand.prefix,key action,...), where ... are string.format-able objects
+    -- space for stuff to do e.g. landing your fighters
+    -- When docking: Make sure to not reset template.squads
     cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
     mineCommand.minableAsteroid = nil
 end

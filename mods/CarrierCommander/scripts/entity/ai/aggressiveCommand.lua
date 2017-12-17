@@ -359,8 +359,8 @@ function aggressiveCommand.deactivate(button)
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
         return
     end
-    -- space for stuff to do e.g. landing your fighters/emptying: aggressiveCommand.squads = {} / aggressiveCommand.startedFighters = {}
-    -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string aggressiveCommand.prefix,key action,...), where ... are string.format-able objects
+    -- space for stuff to do e.g. landing your fighters
+    -- When docking: Make sure to not reset template.squads
     cc.applyCurrentAction(aggressiveCommand.prefix, aggressiveCommand.setSquadsIdle())
     aggressiveCommand.targetEnemy = nil
 end

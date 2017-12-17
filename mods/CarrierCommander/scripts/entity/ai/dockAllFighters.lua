@@ -71,8 +71,8 @@ function dockAll.deactivate(button)
         end
         return
     end
-    -- space for stuff to do e.g. landing your fighters/emptying: dockAll.squads = {} / dockAll.startedFighters = {}
-    -- When docking: Make sure to inform the CarrierManager of those squads/fighters with cc.applyCurrentAction(string prefix,key action,...), where ... are string.format-able objects
+    -- space for stuff to do e.g. landing your fighters
+    -- When docking: Make sure to not reset template.squads
     local ai = ShipAI()
     ai:setIdle()
 
