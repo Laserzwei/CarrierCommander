@@ -20,7 +20,7 @@ for _,prefix in ipairs(pluginKeys) do
         package.path = package.path .. ";".. path
         cc.commands[prefix] = require (name)
         cc.commands[prefix].prefix = prefix
-        print("Loaded Fightermodule  ", prefix)
+        --print("Loaded Fightermodule  ", prefix)
     else
         print("Prefix", prefix,"already used!")
     end
@@ -56,7 +56,6 @@ end
 
 function registerSectorCallbacks()
     if isRegistered then return end
-    print("register")
     local sector = Sector()
     sectorX, sectorY = sector:getCoordinates()
     --orders
@@ -78,7 +77,6 @@ end
 function unregisterSectorCallbacks(x,y)
     if sectorX == nil or sectorY == nil or not isRegistered then return end
     if next(cc.squadsDocking) then return end   -- don't unregister when we still expect fighters to dock
-    print("unregister")
     local sector = Sector(x,y)
     --orders
     --sector:unregisterCallback("onSquadOrdersChanged","squadOrdersChanged")    --needed for docking

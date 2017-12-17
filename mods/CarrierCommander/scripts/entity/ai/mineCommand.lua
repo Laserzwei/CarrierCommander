@@ -121,11 +121,9 @@ function mineCommand.findMinableAsteroid()
     local ship = Entity()
     local sector = Sector()
     local oldAstroNum
-    if mineCommand.minableAsteroid then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
-        oldAstroNum = mineCommand.minableAsteroid.index.number
-    end
 
-    if valid(mineCommand.minableAsteroid) then
+    if valid(mineCommand.minableAsteroid) then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
+        oldAstroNum = mineCommand.minableAsteroid.index.number
         mineCommand.unregisterTarget()
     end
 

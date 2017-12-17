@@ -113,10 +113,10 @@ function salvageCommand.findWreckage()
     local ship = Entity()
     local sector = Sector()
     local oldWreckNum
-    if salvageCommand.salvagableWreck then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
-        oldWreckNum = mineCommand.salvagableWreck.index.number
+
     end
-    if valid(salvageCommand.salvagableWreck) then
+    if valid(salvageCommand.salvagableWreck) then -- because even after the "wreckagedestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Wreckage) >,<
+        oldWreckNum = salvageCommand.salvagableWreck.index.number
         salvageCommand.unregisterTarget()
     end
 

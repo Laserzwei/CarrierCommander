@@ -12,6 +12,7 @@ aggressiveCommand.controlledFighters = {}   --[1-120] = fighterIndex        --Li
 --data
 aggressiveCommand.hostileThreshold = -40000
 aggressiveCommand.tf = 0
+aggressiveCommand.tfCounter = 0
 
 --required UI
 aggressiveCommand.needsButton = true
@@ -26,16 +27,26 @@ function aggressiveCommand.init()
     end
 end
 
---[[function aggressiveCommand.updateServer(timestep)
+function aggressiveCommand.updateServer(timestep)
     aggressiveCommand.tf = aggressiveCommand.tf + timestep
-    if aggressiveCommand.tf > 5 and aggressiveCommand.active then
-        aggressiveCommand.tf = 0
-        local shipAI = ShipAI(Entity().index)
-        print("Enemy present", shipAI:isEnemyPresent(aggressiveCommand.hostileThreshold))
-        local e = shipAI:getNearestEnemy(aggressiveCommand.hostileThreshold)
-        if e then print("Enemy", e.name) end
+    if aggressiveCommand.active then
+        if aggressiveCommand.tf > 5 then
+            aggressiveCommand.tf = 0
+            if not valid(aggressiveCommand.enemyTarget) then
+                if aggressiveCommand.findEnemy() then
+                    aggressiveCommand.attack()
+                end
+            end
+            aggressiveCommand.tfCounter = aggressiveCommand.tfCounter + 1
+            if aggressiveCommand.tfCounter > 4 and valid(aggressiveCommand.enemyTarget) then    --search for higher priority target
+                aggressiveCommand.tfCounter = 0
+                if aggressiveCommand.findEnemy() then
+                    aggressiveCommand.attack()
+                end
+            end
+        end
     end
-end]]
+end
 
 function aggressiveCommand.initConfigUI(scrollframe, pos, size)
 
@@ -187,8 +198,8 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
             end
         end
 
-        if valid(aggressiveCommand.enemyTarget) then print(" FE Enemy", aggressiveCommand.enemyTarget.name, aggressiveCommand.enemyTarget.durability, hasTargetChanged) end
         if valid(aggressiveCommand.enemyTarget) then
+            --print(" FE Enemy", aggressiveCommand.enemyTarget.name, aggressiveCommand.enemyTarget.durability, hasTargetChanged)
             if hasTargetChanged then
                 if oldEnemy and oldEnemy.durability > 0 then aggressiveCommand.unregisterTarget(oldEnemy) end
                 aggressiveCommand.registerTarget()
@@ -198,6 +209,8 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
             end
         end
     end
+    --No enemy found -> set Idle
+    aggressiveCommand.setSquadsIdle()
     aggressiveCommand.enemyTarget = nil
     return false
 end
@@ -342,7 +355,7 @@ end
 --<button> is clicked button-Object onClient and prefix onServer
 function aggressiveCommand.deactivate(button)
     if onClient() then
-        cc.l.tooltipadditions[aggressiveCommand.prefix] = "- Attacking Enemies"
+        cc.l.tooltipadditions[aggressiveCommand.prefix] = "- Stopped Attacking Enemies"
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
         return
     end
