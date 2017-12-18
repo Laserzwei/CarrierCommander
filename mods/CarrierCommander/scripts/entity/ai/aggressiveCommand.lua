@@ -23,7 +23,7 @@ aggressiveCommand.inactiveTooltip = cc.l.actionTostringMap[-1]
 
 function aggressiveCommand.init()
     if onServer() then
-        aggressiveCommand.xsotanFactionIndex = Galaxy():findFaction("The Xsotan").index
+        aggressiveCommand.xsotanFactionIndex = Galaxy():findFaction("The Xsotan").index or -1
     end
 end
 
