@@ -22,9 +22,6 @@ aggressiveCommand.activeTooltip = cc.l.actionTostringMap["idle"]
 aggressiveCommand.inactiveTooltip = cc.l.actionTostringMap[-1]
 
 function aggressiveCommand.init()
-    if onServer() then
-        aggressiveCommand.xsotanFactionIndex = Galaxy():findFaction("The Xsotan").index or -1
-    end
 end
 
 function aggressiveCommand.updateServer(timestep)
@@ -148,14 +145,13 @@ function aggressiveCommand.getSquadsToManage()
 
     aggressiveCommand.squads = squads
     local len = tablelength(squads)
-
     if (hasChanged  or oldLength ~= tablelength(squads)) and len > 0 then
-        return 1
+        return true
     else
         if len == 0 then
             cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
         end
-        return 0
+        return false
     end
 end
 
@@ -234,7 +230,7 @@ function aggressiveCommand.checkEnemy(e, ignored)
     local faction = Faction()
     local b = false
     if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then b = true -- low faction
-    elseif e.factionIndex == aggressiveCommand.xsotanFactionIndex then b = true end-- xsotan ship
+    elseif isXsotan(e.factionIndex) then b = true end-- xsotan ship
     if e:getValue("civil") and not cc.settings[aggressiveCommand.prefix.."spareCivilsSetting"] then
         b = false
     end
@@ -245,7 +241,13 @@ function aggressiveCommand.checkEnemy(e, ignored)
 
     return b
 end
-
+function isXsotan(factionIndex)
+    local xsotan = Galaxy():findFaction("The Xsotan"%_T)
+    if not xsotan then
+        return false
+    end
+    return factionIndex == xsotan.index
+end
 function aggressiveCommand.setSquadsIdle()
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
@@ -338,12 +340,11 @@ function aggressiveCommand.activate(button)
         cc.l.tooltipadditions[aggressiveCommand.prefix] = "+ Attacking Enemies"
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
 
-        cc.applyCurrentAction(aggressiveCommand.prefix, "idle")
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     aggressiveCommand.squads = {}
-    aggressiveCommand.getSquadsToManage()
+    if not aggressiveCommand.getSquadsToManage() then cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
 
     if aggressiveCommand.findEnemy() then
         aggressiveCommand.attack()

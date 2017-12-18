@@ -108,10 +108,14 @@ function mineCommand.getSquadsToManage()
     end
 
     mineCommand.squads = squads
-    if hasChanged or oldLength ~= tablelength(squads) then
-        return 1
+    local len = tablelength(squads)
+    if hasChanged or oldLength ~= tablelength(squads) and len > 0 then
+        return true
     else
-        return 0
+        if len == 0 then
+            cc.applyCurrentAction(mineCommand.prefix, "targetButNoFighter")
+        end
+        return false
     end
 end
 
@@ -219,13 +223,12 @@ function mineCommand.activate(button)
         cc.l.tooltipadditions[mineCommand.prefix] = "+ Mining"
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
 
-        cc.applyCurrentAction(mineCommand.prefix, 5)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     mineCommand.squads = {}
+    if not mineCommand.getSquadsToManage() then cc.applyCurrentAction(mineCommand.prefix, "targetButNoFighter") return end
     if mineCommand.findMinableAsteroid() then
-        mineCommand.getSquadsToManage()
         mineCommand.mine()
     else
         cc.applyCurrentAction(mineCommand.prefix, "idle")

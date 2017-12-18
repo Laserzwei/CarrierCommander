@@ -100,10 +100,14 @@ function salvageCommand.getSquadsToManage()
     end
 
     salvageCommand.squads = squads
-    if hasChanged or oldLength ~= tablelength(squads) then
-        return 1
+    local len = tablelength(squads)
+    if hasChanged or oldLength ~= tablelength(squads) and len > 0 then
+        return true
     else
-        return 0
+        if len == 0 then
+            cc.applyCurrentAction(salvageCommand.prefix, "targetButNoFighter")
+        end
+        return false
     end
 end
 
@@ -121,10 +125,10 @@ function salvageCommand.findWreckage()
 
     salvageCommand.salvagableWreck = nil
 
-    local asteroids = {sector:getEntitiesByType(EntityType.Wreckage)}
+    local wreckages = {sector:getEntitiesByType(EntityType.Wreckage)}
     local nearest = math.huge
     --Go after closest wreckage first
-    for _, w in pairs(asteroids) do
+    for _, w in pairs(wreckages) do
         local resources = w:getMineableResources()
         if resources ~= nil and resources > 25 and oldWreckNum ~= w.index.number then
             local dist = distance2(w.translationf, ship.translationf)
@@ -205,19 +209,30 @@ function salvageCommand.onSectorChanged(x, y)
     end
 end
 
+function salvageCommand.wreckageCreated(entity)
+    if salvageCommand.active then
+        if not valid(salvageCommand.salvagableWreck) then
+            local resources = entity:getMineableResources()
+            if resources ~= nil and resources > 25 then
+                salvageCommand.salvagableWreck = entity
+                salvageCommand.salvage()
+            end
+        end
+    end
+end
+
 --<button> is clicked button-Object onClient and prefix onServer
 function salvageCommand.activate(button)
     if onClient() then
         cc.l.tooltipadditions[salvageCommand.prefix] = "+ Salvaging"
         cc.setAutoAssignTooltip(cc.autoAssignButton.onPressedFunction == "StopAutoAssign")
 
-        cc.applyCurrentAction(salvageCommand.prefix, 6)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     salvageCommand.squads = {}
+    if not salvageCommand.getSquadsToManage() then cc.applyCurrentAction(salvageCommand.prefix, "targetButNoFighter") return end
     if salvageCommand.findWreckage() then
-        salvageCommand.getSquadsToManage()
         salvageCommand.salvage()
     else
         cc.applyCurrentAction(salvageCommand.prefix, "idle")
