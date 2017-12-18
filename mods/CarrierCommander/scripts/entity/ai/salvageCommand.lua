@@ -114,7 +114,6 @@ function salvageCommand.findWreckage()
     local sector = Sector()
     local oldWreckNum
 
-    end
     if valid(salvageCommand.salvagableWreck) then -- because even after the "wreckagedestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Wreckage) >,<
         oldWreckNum = salvageCommand.salvagableWreck.index.number
         salvageCommand.unregisterTarget()
