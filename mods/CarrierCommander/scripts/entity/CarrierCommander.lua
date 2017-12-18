@@ -312,6 +312,8 @@ function initUI()
         local command = cc.commands[prefix]
         if command.needsButton then
             local button = tab:createButton(ButtonRect(), command.inactiveButtonCaption, "buttonActivate")
+            button.textSize = 18
+            button.maxTextSize = 18
             local pic = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
             pic.isIcon = true
             pic.tooltip = "Not doing anything."
@@ -323,6 +325,8 @@ function initUI()
     end
 
     cc.autoAssignButton = tab:createButton(ButtonRect(), "Carrier - Auto Assign", "autoAssign")
+    cc.autoAssignButton.textSize = 18
+    cc.autoAssignButton.maxTextSize = 18
     cc.autoAssignPicture = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
     cc.autoAssignPicture.isIcon = true
     cc.autoAssignPicture.tooltip = "Not doing anything."
