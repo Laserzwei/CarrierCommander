@@ -31,6 +31,7 @@ function aggressiveCommand.updateServer(timestep)
             aggressiveCommand.tf = 0
             if not valid(aggressiveCommand.enemyTarget) then
                 if aggressiveCommand.findEnemy() then
+                    aggressiveCommand.getSquadsToManage()
                     aggressiveCommand.attack()
                 end
             end
@@ -38,6 +39,7 @@ function aggressiveCommand.updateServer(timestep)
             if aggressiveCommand.tfCounter > 4 and valid(aggressiveCommand.enemyTarget) then    --search for higher priority target
                 aggressiveCommand.tfCounter = 0
                 if aggressiveCommand.findEnemy() then
+                    aggressiveCommand.getSquadsToManage()
                     aggressiveCommand.attack()
                 end
             end
@@ -116,6 +118,7 @@ function aggressiveCommand.attack()
     if numSquads > 0 then
         cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, aggressiveCommand.enemyTarget.name)
     else
+        print("T2")
         cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
     end
     return numSquads
@@ -149,6 +152,7 @@ function aggressiveCommand.getSquadsToManage()
         return true
     else
         if len == 0 then
+            print("T3")
             cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
         end
         return false
@@ -323,11 +327,13 @@ function aggressiveCommand.flyableCreated(entity)
                 local distNew = distance2(entity.translationf, ship.translationf)
                 if ((distNew < distCurrent and prioCurrent <= prioNew) or (prioCurrent < prioNew)) then
                     aggressiveCommand.enemyTarget = entity
+                    aggressiveCommand.getSquadsToManage()
                     aggressiveCommand.attack()
                 end
             end
         else
             if aggressiveCommand.findEnemy() then
+                aggressiveCommand.getSquadsToManage()
                 aggressiveCommand.attack()
             end
         end
@@ -344,7 +350,7 @@ function aggressiveCommand.activate(button)
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     aggressiveCommand.squads = {}
-    if not aggressiveCommand.getSquadsToManage() then cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
+    if not aggressiveCommand.getSquadsToManage() then print("T1");cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
 
     if aggressiveCommand.findEnemy() then
         aggressiveCommand.attack()

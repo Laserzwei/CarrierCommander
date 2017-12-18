@@ -441,7 +441,7 @@ function docking(prefix, squad, removeSquad)
             cc.squadsDocking[squad] = prefix
         end
     end
-    local isWorthSending = next(cc.squadsDocking) and not removeSquad
+
     local fightersByPrefix = {}
     for squad,pref in pairs(cc.squadsDocking) do    -- counting how many fighters are missing per squad
         local hangar = Hangar(Entity().index)
@@ -457,7 +457,7 @@ function docking(prefix, squad, removeSquad)
         end
     end
 
-    if onServer() and isWorthSending then
+    if onServer() then
         broadcastInvokeClientFunction("docking", prefix, squad, removeSquad)
         return
     end

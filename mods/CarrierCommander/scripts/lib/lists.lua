@@ -1,8 +1,8 @@
 local list = {}
 --
 list.selectableOrderNames = {}
-    list.selectableOrderNames[FighterOrders.Defend] = "Defend"
     list.selectableOrderNames[FighterOrders.Return] = "Dock"
+    list.selectableOrderNames[FighterOrders.Defend] = "Defend"
 
 list.uiElementToSettingMap = {}
 
