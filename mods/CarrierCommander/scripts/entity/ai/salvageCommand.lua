@@ -215,6 +215,8 @@ function salvageCommand.wreckageCreated(entity)
             local resources = entity:getMineableResources()
             if resources ~= nil and resources > 25 then
                 salvageCommand.salvagableWreck = entity
+                salvageCommand.getSquadsToManage()
+                salvageCommand.registerTarget()
                 salvageCommand.salvage()
             end
         end
