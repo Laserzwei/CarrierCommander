@@ -58,7 +58,6 @@ function mineCommand.unregisterTarget()
 end
 
 function asteroidDestroyed(index, lastDamageInflictor)
-    print("asteroid destroyed fired")
     if mineCommand.findMinableAsteroid() then
         mineCommand.mine()
     else
