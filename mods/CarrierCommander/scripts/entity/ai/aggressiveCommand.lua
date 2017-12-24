@@ -227,7 +227,7 @@ function aggressiveCommand.getPriority(entity)
     --custom priorities
     for k,p in pairs(cc.Config.additionalPriorities) do
         local val = entity:getValue(k)
-        if val then
+        if val ~= nil then
             priority = p
         end
     end
