@@ -322,7 +322,7 @@ end
 
 function aggressiveCommand.flyableCreated(entity)
     if aggressiveCommand.active then
-        if aggressiveCommand.enemyTarget then
+        if aggressiveCommand.enemyTarget and valid(aggressiveCommand.enemyTarget) then
             if aggressiveCommand.checkEnemy(entity) then
                 local ship = Entity()
 
