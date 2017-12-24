@@ -21,18 +21,15 @@ Config.carrierScripts = {
 }
 
 
-Config.Settings = {}
+Config.basePriorities = {
+    ship = 20,
+    guardian = 15,
+    station = 10,
+    fighter = 5,
+}
+Config.additionalPriorities = { --Only for modded additions. Modders: When creating a new Boss then use Entity():setValue("customBoss", someValidValue), to mark it. The Attack script will then activley search for those marked enemies and assign the priority set in the config
 
-Config.Settings.Aggressive = {
-    attackStations = true,        -- Defines if stations should be attacked. Possible values: true, false; Default: true
-    attackFighters = true,        -- Defines if fighters should be attacked. Possible values: true, false; Default: true
-
-    priorities = {
-        ship = 20,
-        guardian = 15,
-        station = 10,
-        fighter = 5,
-    }
+    --customBoss = 25
 }
 
 return Config

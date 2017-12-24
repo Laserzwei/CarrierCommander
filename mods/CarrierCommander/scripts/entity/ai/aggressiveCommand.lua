@@ -118,7 +118,6 @@ function aggressiveCommand.attack()
     if numSquads > 0 then
         cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, aggressiveCommand.enemyTarget.name)
     else
-        print("T2")
         cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
     end
     return numSquads
@@ -152,7 +151,6 @@ function aggressiveCommand.getSquadsToManage()
         return true
     else
         if len == 0 then
-            print("T3")
             cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
         end
         return false
@@ -217,15 +215,23 @@ end
 
 function aggressiveCommand.getPriority(entity)
     if not valid(entity) then return -1 end
-    local p = 0
+    local priority = 0
 
-    if(entity.isShip) then p = cc.Config.Settings.Aggressive.priorities.ship
-    elseif entity.isStation and cc.Config.Settings.Aggressive.attackStations then p = cc.Config.Settings.Aggressive.priorities.station
-    elseif entity.isFighter and cc.Config.Settings.Aggressive.attackFighters then p = cc.Config.Settings.Aggressive.priorities.fighter
-    else p = -1 end -- do not attack other entities
-    if entity:hasScript("story/wormholeguardian.lua") then p = Config.Settings.Aggressive.guardian end -- Lets kill adds first, then the guardian
+    -- vanilla priorities
+    if entity.isShip then priority = cc.Config.basePriorities.ship
+    elseif entity.isStation and then priority = cc.Config.basePriorities.station
+    elseif entity.isFighter then priority = cc.Config.basePriorities.fighter
+    elseif entity:hasScript("story/wormholeguardian.lua") then priority = cc.Config.basePriorities.guardian
+    else priority = -1 end -- do not attack other entities
 
-    return p
+    --custom priorities
+    for k,p in pairs(cc.Config.additionalPriorities) do
+        local val = entity:getValue(k)
+        if val then
+            priority = p
+        end
+    end
+    return priority
 end
 --checks for hostility, xsotan ownership, civil-config, station-config
 function aggressiveCommand.checkEnemy(e, ignored)
@@ -350,7 +356,7 @@ function aggressiveCommand.activate(button)
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     aggressiveCommand.squads = {}
-    if not aggressiveCommand.getSquadsToManage() then print("T1");cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
+    if not aggressiveCommand.getSquadsToManage() then cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
 
     if aggressiveCommand.findEnemy() then
         aggressiveCommand.attack()
