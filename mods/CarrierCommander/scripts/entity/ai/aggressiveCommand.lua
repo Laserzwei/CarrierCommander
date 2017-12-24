@@ -223,7 +223,7 @@ function aggressiveCommand.getPriority(entity)
     elseif entity.isStation and cc.Config.Settings.Aggressive.attackStations then p = cc.Config.Settings.Aggressive.priorities.station
     elseif entity.isFighter and cc.Config.Settings.Aggressive.attackFighters then p = cc.Config.Settings.Aggressive.priorities.fighter
     else p = -1 end -- do not attack other entities
-    if entity:hasScript("story/wormholeguardian.lua") then p = 15 end -- Lets kill adds first, then the guardian
+    if entity:hasScript("story/wormholeguardian.lua") then p = Config.Settings.Aggressive.guardian end -- Lets kill adds first, then the guardian
 
     return p
 end
