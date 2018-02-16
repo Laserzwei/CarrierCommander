@@ -10,6 +10,7 @@ salvageCommand.active = false
 salvageCommand.squads = {}                  --[squadIndex] = squadIndex           --squads to manage
 salvageCommand.controlledFighters = {}      --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 --data
+salvageCommand.tf = 0
 
 --required UI
 salvageCommand.needsButton = true
@@ -20,6 +21,20 @@ salvageCommand.inactiveTooltip = cc.l.actionTostringMap[-1]
 
 function salvageCommand.init()
 
+end
+
+function salvageCommand.updateServer(timestep)
+	salvageCommand.tf = salvageCommand.tf + timestep
+	if salvageCommand.active and not valid(salvageCommand.salvagableWreck) then
+		if salvageCommand.tf > 5 then
+			salvageCommand.tf = 0
+			if salvageCommand.findWreckage() then
+				salvageCommand.salvage()
+			else
+				cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
+			end
+		end
+	end
 end
 
 function salvageCommand.initConfigUI(scrollframe, pos, size)
@@ -129,8 +144,9 @@ function salvageCommand.findWreckage()
     local nearest = math.huge
     --Go after closest wreckage first
     for _, w in pairs(wreckages) do
+		w:waitUntilAsyncWorkFinished()
         local resources = w:getMineableResources()
-        if resources ~= nil and resources > 25 and oldWreckNum ~= w.index.number then
+        if resources ~= nil and resources > 5 and oldWreckNum ~= w.index.number then
             local dist = distance2(w.translationf, ship.translationf)
             if dist < nearest then
                 nearest = dist
@@ -212,8 +228,9 @@ end
 function salvageCommand.wreckageCreated(entity)
     if salvageCommand.active then
         if not valid(salvageCommand.salvagableWreck) then
+			entity:waitUntilAsyncWorkFinished()
             local resources = entity:getMineableResources()
-            if resources ~= nil and resources > 25 then
+            if resources ~= nil and resources > 5 then
                 salvageCommand.salvagableWreck = entity
                 salvageCommand.getSquadsToManage()
                 salvageCommand.registerTarget()

@@ -219,7 +219,7 @@ function aggressiveCommand.getPriority(entity)
 
     -- vanilla priorities
     if entity.isShip then priority = cc.Config.basePriorities.ship
-    elseif entity.isStation and then priority = cc.Config.basePriorities.station
+    elseif entity.isStation then priority = cc.Config.basePriorities.station
     elseif entity.isFighter then priority = cc.Config.basePriorities.fighter
     elseif entity:hasScript("story/wormholeguardian.lua") then priority = cc.Config.basePriorities.guardian
     else priority = -1 end -- do not attack other entities
