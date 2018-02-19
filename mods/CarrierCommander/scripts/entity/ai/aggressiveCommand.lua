@@ -63,18 +63,25 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     --attack Civils
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Attack Civils", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."spareCivilsSetting"
-    checkBox.tooltip = "Determines wether enemy civil ships will be attacked (checkded), or not (unchecked)"
+    checkBox.tooltip = "Determines wether enemy civil ships will be attacked (checked), or not (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Attack Stations", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackStations"
-    checkBox.tooltip = "Determines wether enemy stations will be attacked (checkded), or not (unchecked)"
+    checkBox.tooltip = "Determines wether enemy stations will be attacked (checked), or not (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
 
+    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Aggressive Targetting", "onCheckBoxChecked")
+    cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackNearest"
+    checkBox.tooltip = "Attack ship closest to squad (checked), or closest to ship (unchecked)"
+    checkBox.captionLeft = false
+    checkBox.fontSize = 14
+    pos = pos + vec2(0,35)
+    
     return pos
 end
 

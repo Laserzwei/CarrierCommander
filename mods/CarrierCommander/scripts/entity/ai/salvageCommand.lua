@@ -132,10 +132,14 @@ function salvageCommand.findWreckage()
     local ship = Entity()
     local sector = Sector()
     local oldWreckNum
+    local sourceXYZ
 
     if valid(salvageCommand.salvagableWreck) then -- because even after the "wreckagedestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Wreckage) >,<
         oldWreckNum = salvageCommand.salvagableWreck.index.number
+	sourceXYZ = salvageCommand.salvagableWreck.translationf
         salvageCommand.unregisterTarget()
+	else
+	sourceXYZ = ship.translationf
     end
 
     salvageCommand.salvagableWreck = nil
@@ -147,7 +151,7 @@ function salvageCommand.findWreckage()
 		w:waitUntilAsyncWorkFinished()
         local resources = w:getMineableResources()
         if resources ~= nil and resources > 5 and oldWreckNum ~= w.index.number then
-            local dist = distance2(w.translationf, ship.translationf)
+            local dist = distance2(w.translationf, sourceXYZ)
             if dist < nearest then
                 nearest = dist
                 salvageCommand.salvagableWreck = w
