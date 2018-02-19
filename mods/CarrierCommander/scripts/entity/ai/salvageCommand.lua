@@ -50,6 +50,13 @@ function salvageCommand.initConfigUI(scrollframe, pos, size)
     cc.addOrdersToCombo(comboBox)
     pos = pos + vec2(0,35)
 
+    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Salvage Nearest", "onCheckBoxChecked")
+    cc.l.uiElementToSettingMap[checkBox.index] = salvageCommand.prefix.."salvageNN"
+    checkBox.tooltip = "Fighters will target the nearest wreckage to the last one salvaged (checked), \nor the one nearest to the mothership (unchecked)."
+    checkBox.captionLeft = false
+    checkBox.fontSize = 14
+    pos = pos + vec2(0,35)
+
     return pos
 end
 
@@ -136,10 +143,14 @@ function salvageCommand.findWreckage()
 
     if valid(salvageCommand.salvagableWreck) then -- because even after the "wreckagedestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Wreckage) >,<
         oldWreckNum = salvageCommand.salvagableWreck.index.number
-	sourceXYZ = salvageCommand.salvagableWreck.translationf
+        if cc.settings[salvageCommand.prefix.."salvageNN"] then
+            sourceXYZ = salvageCommand.salvagableWreck.translationf
+        else
+            sourceXYZ = ship.translationf
+        end
         salvageCommand.unregisterTarget()
 	else
-	sourceXYZ = ship.translationf
+        sourceXYZ = ship.translationf
     end
 
     salvageCommand.salvagableWreck = nil

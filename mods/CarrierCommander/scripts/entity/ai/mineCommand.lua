@@ -31,13 +31,20 @@ function mineCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-    cc.l.uiElementToSettingMap[comboBox.index] = "mineStopOrder"
+    cc.l.uiElementToSettingMap[comboBox.index] = mineCommand.prefix.."mineStopOrder"
     cc.addOrdersToCombo(comboBox)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine all Asteroids", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = "mineAllSetting"
-    checkBox.tooltip = "Determines wether all asteroids in a sector (checkded), \nor only resource asteroids (unchecked) will be mined."
+    cc.l.uiElementToSettingMap[checkBox.index] = mineCommand.prefix.."mineAllSetting"
+    checkBox.tooltip = "Determines wether all asteroids in a sector (checked), \nor only resource asteroids (unchecked) will be mined."
+    checkBox.captionLeft = false
+    checkBox.fontSize = 14
+    pos = pos + vec2(0,35)
+
+    local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine Nearest", "onCheckBoxChecked")
+    cc.l.uiElementToSettingMap[checkBox.index] = mineCommand.prefix.."mineNN"
+    checkBox.tooltip = "Fighters will target the nearest asteroid to the last one mined (checked), \nor the one nearest to the mothership (unchecked)."
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
@@ -125,12 +132,16 @@ function mineCommand.findMinableAsteroid()
     local sector = Sector()
     local oldAstroNum
     local sourceXYZ
-    
+
     if valid(mineCommand.minableAsteroid) then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
         oldAstroNum = mineCommand.minableAsteroid.index.number
-        sourceXYZ = mineCommand.minableAsteroid.translationf
-        mineCommand.unregisterTarget()
+        if cc.settings[mineCommand.prefix.."mineNN"] then
+            sourceXYZ = mineCommand.minableAsteroid.translationf
         else
+            sourceXYZ = ship.translationf
+        end
+        mineCommand.unregisterTarget()
+    else
         sourceXYZ = ship.translationf
     end
 
@@ -141,7 +152,7 @@ function mineCommand.findMinableAsteroid()
     --Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
-        if ((resources ~= nil and resources > 0) or cc.settings["mineAllSetting"]) and a.index.number ~= oldAstroNum then
+        if ((resources ~= nil and resources > 0) or cc.settings[mineCommand.prefix.."mineAllSetting"]) and a.index.number ~= oldAstroNum then
             local dist = distance2(a.translationf, sourceXYZ)
             if dist < nearest then
                 nearest = dist
@@ -166,7 +177,7 @@ function mineCommand.setSquadsIdle()
         return
     end
 
-    local order = cc.settings["mineStopOrder"] or FighterOrders.Return
+    local order = cc.settings[mineCommand.prefix.."mineStopOrder"] or FighterOrders.Return
     local squads = {}
     for _,squad in pairs(mineCommand.squads) do
         fighterController:setSquadOrders(squad, order, Entity().index)

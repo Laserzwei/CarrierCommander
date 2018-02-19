@@ -57,7 +57,7 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-    cc.l.uiElementToSettingMap[comboBox.index] = "attackStopOrder"
+    cc.l.uiElementToSettingMap[comboBox.index] = aggressiveCommand.prefix.."attackStopOrder"
     cc.addOrdersToCombo(comboBox)
     pos = pos + vec2(0,35)
     --attack Civils
@@ -76,12 +76,12 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Aggressive Targetting", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackNearest"
+    cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackNN"
     checkBox.tooltip = "Attack ship closest to squad (checked), or closest to ship (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
-    
+
     return pos
 end
 
@@ -171,6 +171,13 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
     if shipAI:isEnemyPresent(aggressiveCommand.hostileThreshold) then
         local ship = Entity()
         local oldEnemy = aggressiveCommand.enemyTarget
+        local sourceXYZ
+
+        if cc.settings[aggressiveCommand.prefix.."attackNN"] and oldEnemy and valid(oldEnemy) then
+            sourceXYZ = oldEnemy.translationf
+        else
+            sourceXYZ = ship.translationf
+        end
 
         if not aggressiveCommand.checkEnemy(oldEnemy, ignoredEntityIndex) then
             aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
@@ -193,7 +200,7 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
         for _, e in pairs(entities) do
             if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
                 local p = aggressiveCommand.getPriority(e)
-                local dist = distance2(e.translationf, ship.translationf)
+                local dist = distance2(e.translationf, sourceXYZ)
                 if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
                     nearest = dist
                     aggressiveCommand.enemyTarget = e
@@ -273,7 +280,7 @@ function aggressiveCommand.setSquadsIdle()
         return
     end
 
-    local order = cc.settings["attackStopOrder"] or FighterOrders.Return
+    local order = cc.settings[aggressiveCommand.prefix.."attackStopOrder"] or FighterOrders.Return
     local squads = {}
     for _,squad in pairs(aggressiveCommand.squads) do
         fighterController:setSquadOrders(squad, order, Entity().index)
