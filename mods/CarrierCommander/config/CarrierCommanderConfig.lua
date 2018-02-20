@@ -1,6 +1,6 @@
 local Config = {}
 
-Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei, Cwhizard"
+Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei"
 Config.ModName = "CarrierCommander"
 Config.version = {
     major=0, minor=10, patch = 0,

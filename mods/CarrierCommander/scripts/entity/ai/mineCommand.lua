@@ -131,18 +131,18 @@ function mineCommand.findMinableAsteroid()
     local ship = Entity()
     local sector = Sector()
     local oldAstroNum
-    local sourceXYZ
+    local currentPos
 
     if valid(mineCommand.minableAsteroid) then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
         oldAstroNum = mineCommand.minableAsteroid.index.number
         if cc.settings[mineCommand.prefix.."mineNN"] then
-            sourceXYZ = mineCommand.minableAsteroid.translationf
+            currentPos = mineCommand.minableAsteroid.translationf
         else
-            sourceXYZ = ship.translationf
+            currentPos = ship.translationf
         end
         mineCommand.unregisterTarget()
     else
-        sourceXYZ = ship.translationf
+        currentPos = ship.translationf
     end
 
     mineCommand.minableAsteroid = nil
@@ -153,7 +153,7 @@ function mineCommand.findMinableAsteroid()
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
         if ((resources ~= nil and resources > 0) or cc.settings[mineCommand.prefix.."mineAllSetting"]) and a.index.number ~= oldAstroNum then
-            local dist = distance2(a.translationf, sourceXYZ)
+            local dist = distance2(a.translationf, currentPos)
             if dist < nearest then
                 nearest = dist
                 mineCommand.minableAsteroid = a

@@ -171,12 +171,12 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
     if shipAI:isEnemyPresent(aggressiveCommand.hostileThreshold) then
         local ship = Entity()
         local oldEnemy = aggressiveCommand.enemyTarget
-        local sourceXYZ
+        local currentPos
 
         if cc.settings[aggressiveCommand.prefix.."attackNN"] and oldEnemy and valid(oldEnemy) then
-            sourceXYZ = oldEnemy.translationf
+            currentPos = oldEnemy.translationf
         else
-            sourceXYZ = ship.translationf
+            currentPos = ship.translationf
         end
 
         if not aggressiveCommand.checkEnemy(oldEnemy, ignoredEntityIndex) then
@@ -200,7 +200,7 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
         for _, e in pairs(entities) do
             if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
                 local p = aggressiveCommand.getPriority(e)
-                local dist = distance2(e.translationf, sourceXYZ)
+                local dist = distance2(e.translationf, currentPos)
                 if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
                     nearest = dist
                     aggressiveCommand.enemyTarget = e
