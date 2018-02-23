@@ -15,6 +15,7 @@ dummyCommand.passedTime = 0
 dummyCommand.starting = false
 
 --required UI
+dummyCommand.needsButton = true
 dummyCommand.inactiveButtonCaption = "Carrier - Dummy Start"
 dummyCommand.activeButtonCaption = "Carrier - Dummy Stop"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
 dummyCommand.activeTooltip = "Dummying around"
