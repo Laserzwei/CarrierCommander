@@ -115,7 +115,7 @@ function aggressiveCommand.attack()
     local numSquads = 0
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not hangar then cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar") return end
 
     for _,squad in pairs(aggressiveCommand.squads) do
         numSquads = numSquads + 1
@@ -123,7 +123,8 @@ function aggressiveCommand.attack()
     end
 
     if numSquads > 0 then
-        cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, aggressiveCommand.enemyTarget.name)
+        local name = aggressiveCommand.enemyTarget.name or "Xsotan fighter"
+        cc.applyCurrentAction(aggressiveCommand.prefix, FighterOrders.Attack, name)
     else
         cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter")
     end
@@ -132,7 +133,7 @@ end
 
 function aggressiveCommand.getSquadsToManage()
     local hangar = Hangar(Entity().index)
-    if not hangar then cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar") return end
     local hasChanged = false
     local oldLength = tablelength(aggressiveCommand.squads)
     local squads = {}
@@ -173,12 +174,14 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
         local oldEnemy = aggressiveCommand.enemyTarget
         local currentPos
 
+        --Cwhizard's Nearest-Neighbor
         if cc.settings[aggressiveCommand.prefix.."attackNN"] and oldEnemy and valid(oldEnemy) then
             currentPos = oldEnemy.translationf
         else
             currentPos = ship.translationf
         end
-
+        --Cwhizard
+        
         if not aggressiveCommand.checkEnemy(oldEnemy, ignoredEntityIndex) then
             aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
             oldEnemy = nil
@@ -220,6 +223,47 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
                 return true
             end
         end
+    else
+        -- xsotan fighters are not recognized by the shipAI:isEnemyPresent()
+        local xsotan = Galaxy():findFaction("The Xsotan"%_T)--TODO check for other nationalities
+        if not xsotan then
+            return false
+        end
+        local ship = Entity()
+        local oldEnemy = aggressiveCommand.enemyTarget
+        local currentPos
+
+        --Cwhizard's Nearest-Neighbor
+        if cc.settings[aggressiveCommand.prefix.."attackNN"] and oldEnemy and valid(oldEnemy) then
+            currentPos = oldEnemy.translationf
+        else
+            currentPos = ship.translationf
+        end
+        --Cwhizard
+
+        local nearest = math.huge
+        local priority = 0
+        if oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
+        local xsotanships = {Sector():getEntitiesByFaction(xsotan.index) }
+        for _, e in pairs(xsotanships) do
+            if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
+                local p = aggressiveCommand.getPriority(e)
+                local dist = distance2(e.translationf, currentPos)
+                if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
+                    nearest = dist
+                    aggressiveCommand.enemyTarget = e
+                    priority = p
+                    hasTargetChanged = true
+                end
+            end
+        end
+
+        if valid(aggressiveCommand.enemyTarget) then
+            if valid(oldEnemy) and oldEnemy.durability > 0 then aggressiveCommand.unregisterTarget(oldEnemy) end
+            aggressiveCommand.registerTarget()
+            return true
+        end
+
     end
     --No enemy found -> set Idle
     aggressiveCommand.setSquadsIdle()
@@ -275,9 +319,8 @@ end
 function aggressiveCommand.setSquadsIdle()
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not fighterController or not hangar then
-        cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar")
-        return
+    if not fighterController or not hangar or hangar.space <= 0  then
+        return "noHangar"
     end
 
     local order = cc.settings[aggressiveCommand.prefix.."attackStopOrder"] or FighterOrders.Return
@@ -368,6 +411,11 @@ function aggressiveCommand.activate(button)
 
         return
     end
+
+    if not Hangar() or Hangar().space <= 0 then
+        cc.applyCurrentAction(aggressiveCommand.prefix, "noHangar")
+        return
+    end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
     aggressiveCommand.squads = {}
     if not aggressiveCommand.getSquadsToManage() then cc.applyCurrentAction(aggressiveCommand.prefix, "targetButNoFighter") return end
@@ -388,7 +436,11 @@ function aggressiveCommand.deactivate(button)
     end
     -- space for stuff to do e.g. landing your fighters
     -- When docking: Make sure to not reset template.squads
-    cc.applyCurrentAction(aggressiveCommand.prefix, aggressiveCommand.setSquadsIdle())
+    local list = {aggressiveCommand.setSquadsIdle()}
+    if list[1] == "noHangar" then
+        list[1] = -1
+    end
+    cc.applyCurrentAction(aggressiveCommand.prefix, unpack(list))
     aggressiveCommand.targetEnemy = nil
 end
 

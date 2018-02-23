@@ -593,6 +593,11 @@ function autoAssign()
                 if command.activate then buttonActivate(command.activationButton) end
             end
         end
+        if not Hangar() or Hangar().space <= 0 then
+            cc.autoAssignPicture.color = cc.l.actionToColorMap["noHangar"]
+
+            cc.setAutoAssignTooltip(false)
+        end
         return
     end
 end

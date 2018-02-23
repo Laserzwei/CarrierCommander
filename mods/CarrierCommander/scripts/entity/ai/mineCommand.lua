@@ -82,7 +82,7 @@ function mineCommand.mine()
     local numSquads = 0
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not hangar then cc.applyCurrentAction(mineCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(mineCommand.prefix, "noHangar") return end
 
     local squads = {}
     for _,squad in pairs(mineCommand.squads) do
@@ -100,7 +100,7 @@ end
 
 function mineCommand.getSquadsToManage()
     local hangar = Hangar(Entity().index)
-    if not hangar then cc.applyCurrentAction(mineCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(mineCommand.prefix, "noHangar") return end
     local hasChanged = false
     local oldLength = tablelength(mineCommand.squads)
     local squads = {}
@@ -135,11 +135,15 @@ function mineCommand.findMinableAsteroid()
 
     if valid(mineCommand.minableAsteroid) then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
         oldAstroNum = mineCommand.minableAsteroid.index.number
+        
+        --Cwhizard's Nearest-Neighbor
         if cc.settings[mineCommand.prefix.."mineNN"] then
             currentPos = mineCommand.minableAsteroid.translationf
         else
             currentPos = ship.translationf
         end
+        --Cwhizard
+
         mineCommand.unregisterTarget()
     else
         currentPos = ship.translationf
@@ -172,9 +176,8 @@ end
 function mineCommand.setSquadsIdle()
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not fighterController or not hangar then
-        cc.applyCurrentAction(mineCommand.prefix, "noHangar")
-        return
+    if not fighterController or not hangar or hangar.space <= 0 then
+        return "noHangar"
     end
 
     local order = cc.settings[mineCommand.prefix.."mineStopOrder"] or FighterOrders.Return
@@ -240,6 +243,10 @@ function mineCommand.activate(button)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    if not Hangar() or Hangar().space <= 0 then
+        cc.applyCurrentAction(mineCommand.prefix, "noHangar")
+        return
+    end
     mineCommand.squads = {}
     if not mineCommand.getSquadsToManage() then cc.applyCurrentAction(mineCommand.prefix, "targetButNoFighter") return end
     if mineCommand.findMinableAsteroid() then
@@ -258,7 +265,11 @@ function mineCommand.deactivate(button)
     end
     -- space for stuff to do e.g. landing your fighters
     -- When docking: Make sure to not reset template.squads
-    cc.applyCurrentAction(mineCommand.prefix, mineCommand.setSquadsIdle())
+    local list = {mineCommand.setSquadsIdle()}
+    if list[1] == "noHangar" then
+        list[1] = -1
+    end
+    cc.applyCurrentAction(mineCommand.prefix, unpack(list))
     mineCommand.minableAsteroid = nil
 end
 

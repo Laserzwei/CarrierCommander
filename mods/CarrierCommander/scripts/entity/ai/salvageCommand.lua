@@ -90,7 +90,7 @@ function salvageCommand.salvage()
     local numSquads = 0
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not hangar then cc.applyCurrentAction(salvageCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(salvageCommand.prefix, "noHangar") return end
 
     local squads = {}
     for _,squad in pairs(salvageCommand.squads) do
@@ -108,7 +108,7 @@ end
 
 function salvageCommand.getSquadsToManage()
     local hangar = Hangar(Entity().index)
-    if not hangar then cc.applyCurrentAction(salvageCommand.prefix, "noHangar") return end
+    if not hangar or hangar.space <= 0 then cc.applyCurrentAction(salvageCommand.prefix, "noHangar") return end
     local hasChanged = false
     local oldLength = tablelength(salvageCommand.squads)
     local squads = {}
@@ -143,11 +143,15 @@ function salvageCommand.findWreckage()
 
     if valid(salvageCommand.salvagableWreck) then -- because even after the "wreckagedestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Wreckage) >,<
         oldWreckNum = salvageCommand.salvagableWreck.index.number
+
+        --Cwhizard's Nearest-Neighbor
         if cc.settings[salvageCommand.prefix.."salvageNN"] then
             currentPos = salvageCommand.salvagableWreck.translationf
         else
             currentPos = ship.translationf
         end
+        --Cwhizard
+        
         salvageCommand.unregisterTarget()
 	else
         currentPos = ship.translationf
@@ -181,9 +185,8 @@ end
 function salvageCommand.setSquadsIdle()
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
-    if not fighterController or not hangar then
-        cc.applyCurrentAction(salvageCommand.prefix, "noHangar")
-        return
+    if not fighterController or not hangar or hangar.space <= 0 then
+        return "noHangar"
     end
 
     local order = cc.settings["salvageStopOrder"] or FighterOrders.Return
@@ -264,6 +267,10 @@ function salvageCommand.activate(button)
         return
     end
     -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    if not Hangar() or Hangar().space <= 0 then
+        cc.applyCurrentAction(salvageCommand.prefix, "noHangar")
+        return
+    end
     salvageCommand.squads = {}
     if not salvageCommand.getSquadsToManage() then cc.applyCurrentAction(salvageCommand.prefix, "targetButNoFighter") return end
     if salvageCommand.findWreckage() then
@@ -282,7 +289,11 @@ function salvageCommand.deactivate(button)
     end
     -- space for stuff to do e.g. landing your fighters
     -- When docking: Make sure to not reset template.squads
-    cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
+    local list = {salvageCommand.setSquadsIdle()}
+    if list[1] == "noHangar" then
+        list[1] = -1
+    end
+    cc.applyCurrentAction(salvageCommand.prefix, unpack(list))
     salvageCommand.salvagableWreck = nil
 end
 
