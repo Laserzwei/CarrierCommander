@@ -181,24 +181,11 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
             currentPos = ship.translationf
         end
         --Cwhizard
-        
-        if not aggressiveCommand.checkEnemy(oldEnemy, ignoredEntityIndex) then
-            aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
-            oldEnemy = nil
-        end
-
-        if ignoredEntityIndex then
-            if aggressiveCommand.enemyTarget and aggressiveCommand.enemyTarget.index.number == ignoredEntityIndex.number then
-                aggressiveCommand.enemyTarget = nil --in case ignoredEntityIndex is our current entity
-                oldEnemy = nil
-            end
-        end
 
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
-        --local entities = {Sector():getEntities()}
         local nearest = math.huge
         local priority = 0
-        if oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
+        if valid(oldEnemy) and oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
         local hasTargetChanged = false
         for _, e in pairs(entities) do
             if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
@@ -215,13 +202,9 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
 
         if valid(aggressiveCommand.enemyTarget) then
             --print(" FE Enemy", aggressiveCommand.enemyTarget.name, aggressiveCommand.enemyTarget.durability, hasTargetChanged)
-            if hasTargetChanged then
-                if oldEnemy and oldEnemy.durability > 0 then aggressiveCommand.unregisterTarget(oldEnemy) end
-                aggressiveCommand.registerTarget()
-                return true
-            else
-                return true
-            end
+            if valid(oldEnemy) and oldEnemy and oldEnemy.durability > 0 then aggressiveCommand.unregisterTarget(oldEnemy) end
+            aggressiveCommand.registerTarget()
+            return true
         end
     else
         -- xsotan fighters are not recognized by the shipAI:isEnemyPresent()
@@ -243,7 +226,7 @@ function aggressiveCommand.findEnemy(ignoredEntityIndex)
 
         local nearest = math.huge
         local priority = 0
-        if oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
+        if valid(oldEnemy) and oldEnemy and aggressiveCommand.getPriority(oldEnemy) then priority = aggressiveCommand.getPriority(oldEnemy) + 1 end -- only take new target if priority is higher
         local xsotanships = {Sector():getEntitiesByFaction(xsotan.index) }
         for _, e in pairs(xsotanships) do
             if aggressiveCommand.checkEnemy(e, ignoredEntityIndex) then
