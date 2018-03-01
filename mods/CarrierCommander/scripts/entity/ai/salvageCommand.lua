@@ -23,20 +23,6 @@ function salvageCommand.init()
 
 end
 
-function salvageCommand.updateServer(timestep)
-	salvageCommand.tf = salvageCommand.tf + timestep
-	if salvageCommand.active and not valid(salvageCommand.salvagableWreck) then
-		if salvageCommand.tf > 5 then
-			salvageCommand.tf = 0
-			if salvageCommand.findWreckage() then
-				salvageCommand.salvage()
-			else
-				cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
-			end
-		end
-	end
-end
-
 function salvageCommand.initConfigUI(scrollframe, pos, size)
     local label = scrollframe:createLabel(pos, "Salvaging config", 15)
     label.tooltip = "Set the behaviour once the Salvaging-operation ends"
@@ -151,7 +137,7 @@ function salvageCommand.findWreckage()
             currentPos = ship.translationf
         end
         --Cwhizard
-        
+
         salvageCommand.unregisterTarget()
 	else
         currentPos = ship.translationf
@@ -164,8 +150,9 @@ function salvageCommand.findWreckage()
     --Go after closest wreckage first
     for _, w in pairs(wreckages) do
 		w:waitUntilAsyncWorkFinished()
-        local resources = w:getMineableResources()
-        if resources ~= nil and resources > 5 and oldWreckNum ~= w.index.number then
+        local resources = sum({w:getMineableResources()})
+
+        if resources ~= nil and resources > 5 and oldWreckNum ~= w.index.number and not w.isAsteroid then
             local dist = distance2(w.translationf, currentPos)
             if dist < nearest then
                 nearest = dist

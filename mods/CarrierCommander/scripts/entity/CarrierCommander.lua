@@ -396,7 +396,7 @@ function sendSettingsToClient()
             getAllMyFighters()
             onSectorChanged(Sector():getCoordinates())
         else
-            print("What the fuck does it want now?")
+            print(Entity().name, "What the fuck does it want now?")
         end
     end
     broadcastInvokeClientFunction("receiveSettings", cc.settings, activeCommands, sectorChange)
@@ -662,6 +662,14 @@ function onSliderValueChanged(slider)
     cc.settings[cc.l.uiElementToSettingMap[slider.index]] = slider.value
     --print(Entity().name, "Slider changed:", cc.l.uiElementToSettingMap[slider.index], slider.value)
     invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[slider.index], slider.value)
+end
+
+function sum(list)
+    local amt = 0
+    for _,k in pairs(list) do
+        amt = amt + k
+    end
+    return amt
 end
 
 --Data securing
