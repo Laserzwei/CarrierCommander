@@ -1,3 +1,0 @@
-function initialize()
-    terminate()
-end
