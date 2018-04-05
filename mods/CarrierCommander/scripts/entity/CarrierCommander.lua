@@ -25,12 +25,11 @@ for _,prefix in ipairs(pluginKeys) do
         print("Prefix", prefix,"already used!")
     end
 end
-local sectorX, sectorY
 --data
 cc.thisCarrierStartedFighters = {}      -- [squadIndex] = {[1-n] = fitghterUuid}
 cc.ownedStartedFighters = {}            -- [carrierIndex] = {[squadIndex] = {[1-n] = fitghterUuid}}
 cc.numActiveCommands = 0
-local isRegistered = false
+local isRegistered = {}
 cc.squadsDocking = {}
 
 --UI
@@ -54,10 +53,12 @@ function initialize()
     end
 end
 
-function registerSectorCallbacks()
-    if isRegistered then return end
+function registerSectorCallbacks(x,y)
+    if not isRegistered[x] then
+        isRegistered[x] = {}
+    elseif isRegistered[x][y] == true then return end
+
     local sector = Sector()
-    sectorX, sectorY = sector:getCoordinates()
     --orders
     sector:registerCallback("onSquadOrdersChanged","squadOrdersChanged")
     --Fighter start and land
@@ -70,30 +71,40 @@ function registerSectorCallbacks()
     --squads
     Entity():registerCallback("onSquadAdded","squadAdded")
     Entity():registerCallback("onSquadRemove","squadRemove")
+    -- sector change
+    Entity():registerCallback("onJump", "onJump")
+    Entity():registerCallback("onSectorEntered", "onSectorEntered")
 
-    isRegistered = true
+    isRegistered[x][y] = true
 end
 
 function unregisterSectorCallbacks(x,y)
-    if sectorX == nil or sectorY == nil or not isRegistered then return end
+    if not isRegistered[x] or not isRegistered[x][y] then return end
     if next(cc.squadsDocking) then return end   -- don't unregister when we still expect fighters to dock
     local sector = Sector(x,y)
     --orders
-    --sector:unregisterCallback("onSquadOrdersChanged","squadOrdersChanged")    --needed for docking
+    sector:unregisterCallback("onSquadOrdersChanged","squadOrdersChanged")    --needed for docking
     --Fighter start and land
     sector:unregisterCallback("onFighterStarted","fighterStarted")
-    --sector:unregisterCallback("onFighterLanded","fighterLanded")              --needed for docking
+    sector:unregisterCallback("onFighterLanded","fighterLanded")              --needed for docking
     -- Hangar management
     --fighters
     sector:unregisterCallback("onFighterAdded","fighterAdded")
     sector:unregisterCallback("onFighterRemove","fighterRemove")
     --squads
-    Entity():unregisterCallback("onSquadAdded","squadAdded")
-    Entity():unregisterCallback("onSquadRemove","squadRemove")
+    --Entity():unregisterCallback("onSquadAdded","squadAdded")
+    --Entity():unregisterCallback("onSquadRemove","squadRemove")
 
     sector:unregisterCallback("onEntityCreate", "entityCreate")
 
-    isRegistered = false
+    isRegistered[x][y] = nil
+end
+
+function unregisterEntityCallbacks()
+    --Entity():unregisterCallback("onSquadAdded","squadAdded")
+    --Entity():unregisterCallback("onSquadRemove","squadRemove")
+    --Entity():unregisterCallback("onJump","onJump")
+    --Entity():unregisterCallback("onSectorEntered","onSectorEntered")
 end
 
 function getAllMyFighters()
@@ -126,6 +137,7 @@ end
 
 function getAllMyFightersCalled()
     Sector():registerCallback("onEntityCreate", "entityCreate") --post init, so we don't get every asteroid, when the sector is loaded
+    --print("allFightersCalled")
     for prefix, command in pairs(cc.commands) do
         if command.getAllMyFightersCalled then command.getAllMyFightersCalled() end
     end
@@ -133,6 +145,7 @@ end
 
 function squadOrdersChanged(entityId, squadIndex, orders, targetId)
     if Entity().index.number == entityId.number then
+        --print(Entity().name, "Squad Order changed", squadIndex, orders, Entity(targetId).name)
         if cc.squadsDocking[squadIndex] and orders ~= FighterOrders.Return then
             local pref = getPrefOfSquad(squadIndex)
             docking(pref, squadIndex, true)
@@ -148,6 +161,12 @@ end
 
 function fighterStarted(entityId, squadIndex, fighterId)
     if Entity(entityId).factionIndex == Entity().factionIndex then
+        local fAI = FighterAI(fighterId)
+        if fAI then
+            --print(Entity(entityId).name, "fighter started squad", squadIndex, cc.l.actionTostringMap[fAI.orders])
+        else
+            --print(Entity(entityId).name, "fighter started squad", squadIndex, Entity(fighterId).name)
+        end
         cc.ownedStartedFighters[entityId.string] = cc.ownedStartedFighters[entityId.string] or {}
         local squadList = cc.ownedStartedFighters[entityId.string][squadIndex] or {}
         squadList[fighterId.string] = 1
@@ -164,7 +183,7 @@ end
 
 function fighterLanded(entityId, squadIndex, fighterId)
     if Entity(entityId).factionIndex == Entity().factionIndex then
-
+        --print(Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
         if cc.ownedStartedFighters[entityId.string]
         and cc.ownedStartedFighters[entityId.string][squadIndex]
         and cc.ownedStartedFighters[entityId.string][squadIndex][fighterId.string] then
@@ -187,6 +206,7 @@ end
 
 function fighterAdded(entityId, squadIndex, fighterIndex, landed)
     if Entity().index.number == entityId.number then
+        --print(Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed)
         for prefix, command in pairs(cc.commands) do
             if command.fighterAdded then command.fighterAdded(entityId, squadIndex, fighterIndex, landed) end
         end
@@ -195,6 +215,7 @@ end
 
 function fighterRemove(entityId, squadIndex, fighterIndex, started) --entityTemplate is not accessable, even though it's supposed to be called BEFORE the fighter gets removed
     if Entity().index.number == entityId.number then
+        --print(Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
         for prefix, command in pairs(cc.commands) do
             if command.fighterRemove then command.fighterRemove(entityId, squadIndex, fighterIndex, started) end
         end
@@ -203,6 +224,7 @@ end
 
 function squadAdded(entityId, index)-- gets also called on squadRename
     if Entity().index.number == entityId.number then
+        --print(Entity().name, "Squad Changed, added", index)
         for prefix, command in pairs(cc.commands) do
             if command.squadAdded then command.squadAdded(entityId, index) end
         end
@@ -211,23 +233,32 @@ end
 
 function squadRemove(entityId, index)
     if Entity().index.number == entityId.number then
+        --print(Entity().name, "Squad Changed, remove", index)
         for prefix, command in pairs(cc.commands) do
             if command.squadRemove then command.squadRemove(entityId, index) end
         end
     end
 end
-
-function onSectorChanged(x, y)
+--gets called before sector change
+function onJump(shipIndex, x, y)
+    --print(Entity().name, "on Jump", x, y)
+    unregisterSectorCallbacks(Sector():getCoordinates())
     for prefix, command in pairs(cc.commands) do
-        if command.onSectorChanged then command.onSectorChanged(x, y) end
+        if command.onJump then command.onJump(x, y) end
+    end
+end
+--gets called after sector change
+function onSectorEntered(entityId, x, y)
+    --print(Entity().name, "on Sector entered", x, y)
+    for prefix, command in pairs(cc.commands) do
+        if command.onSectorEntered then command.onSectorEntered(x, y) end
     end
 end
 
 function entityCreate(entityId)
     local entity = Entity(entityId)
-
     if entity.isFlyable then    -- Stations, Drone, Ship, Fighter
-        --print("Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
+        print("Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
         for prefix, command in pairs(cc.commands) do
             if command.flyableCreated then command.flyableCreated(entity) end
         end
@@ -388,17 +419,6 @@ function sendSettingsToClient()
             activeCommands[prefix] = true
         end
     end
-    if sectorChange then
-        local x,y = Sector():getCoordinates()
-        if x ~= sectorX or y ~= sectorY then
-            unregisterSectorCallbacks(sectorX, sectorY)
-            registerSectorCallbacks()
-            getAllMyFighters()
-            onSectorChanged(Sector():getCoordinates())
-        else
-            print(Entity().name, "What the fuck does it want now?")
-        end
-    end
     broadcastInvokeClientFunction("receiveSettings", cc.settings, activeCommands, sectorChange)
     if not sectorChange then
         sectorChange = true
@@ -409,9 +429,6 @@ function receiveSettings(pSettings, activeCommands, pSectorChange)
     if onClient() then
         cc.settings = pSettings
         client_applySettings()
-        if pSectorChange then
-            --onSectorChanged(Sector():getCoordinates())
-        end
         for prefix,_ in pairs(activeCommands) do
             --activate UI
             buttonActivate(cc.commands[prefix].activationButton)
@@ -550,7 +567,7 @@ function buttonActivate(button)
     cc.commands[button].active = true
     cc.commands[button].activate(button)
     if cc.numActiveCommands >= 1 then
-        registerSectorCallbacks()
+        registerSectorCallbacks(Sector():getCoordinates())
     end
 end
 
@@ -575,7 +592,7 @@ function buttonDeactivate(button)
     cc.commands[button].active = false
     cc.commands[button].deactivate(button)
     if cc.numActiveCommands == 0 then
-        unregisterSectorCallbacks(Sector():getCoordinates())
+        --unregisterSectorCallbacks(Sector():getCoordinates())
     else
 
     end

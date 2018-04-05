@@ -280,18 +280,22 @@ function aggressiveCommand.checkEnemy(e, ignored)
     if ignored and e.index.number == ignored.number then return false end
     local faction = Faction()
     local b = false
-    if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then b = true -- low faction
-    elseif isXsotan(e.factionIndex) then b = true end-- xsotan ship
-    if e:getValue("civil") and not cc.settings[aggressiveCommand.prefix.."spareCivilsSetting"] then
+    if e.factionIndex and faction:getRelations(e.factionIndex) <= aggressiveCommand.hostileThreshold then -- low faction
+        b = true
+    elseif isXsotan(e.factionIndex) then -- xsotan ship
+        b = true
+    end
+    if (e:getValue("civil") ~= nil or e:hasScript("civilship.lua") == true) and not cc.settings[aggressiveCommand.prefix.."spareCivilsSetting"] then
         b = false
     end
-    if e.isStation and not cc.settings[aggressiveCommand.prefix.."attackStations"] then
 
+    if e.isStation and not cc.settings[aggressiveCommand.prefix.."attackStations"] then
         b = false
     end
 
     return b
 end
+
 function isXsotan(factionIndex)
     local xsotan = Galaxy():findFaction("The Xsotan"%_T)
     if not xsotan then
@@ -299,6 +303,7 @@ function isXsotan(factionIndex)
     end
     return factionIndex == xsotan.index
 end
+
 function aggressiveCommand.setSquadsIdle()
     local hangar = Hangar(Entity().index)
     local fighterController = FighterController(Entity().index)
@@ -351,7 +356,7 @@ function aggressiveCommand.squadRemove(entityId, index)
     end
 end
 
-function aggressiveCommand.onSectorChanged(x, y)
+function aggressiveCommand.onSectorEntered(x, y)
     if aggressiveCommand.active then
         if aggressiveCommand.findEnemy() then
             aggressiveCommand.getSquadsToManage()
@@ -359,8 +364,8 @@ function aggressiveCommand.onSectorChanged(x, y)
         end
     end
 end
-
-function aggressiveCommand.flyableCreated(entity)
+--commented out to keep from killing civil ships
+--[[function aggressiveCommand.flyableCreated(entity)
     if aggressiveCommand.active then
         if aggressiveCommand.enemyTarget and valid(aggressiveCommand.enemyTarget) then
             if aggressiveCommand.checkEnemy(entity) then
@@ -384,7 +389,7 @@ function aggressiveCommand.flyableCreated(entity)
             end
         end
     end
-end
+end]]
 
 --<button> is clicked button-Object onClient and prefix onServer
 function aggressiveCommand.activate(button)

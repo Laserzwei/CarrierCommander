@@ -135,7 +135,7 @@ function mineCommand.findMinableAsteroid()
 
     if valid(mineCommand.minableAsteroid) then -- because even after the "asteroiddestroyed" event fired it still is part of sector:getEntitiesByType(EntityType.Asteroid) >,<
         oldAstroNum = mineCommand.minableAsteroid.index.number
-        
+
         --Cwhizard's Nearest-Neighbor
         if cc.settings[mineCommand.prefix.."mineNN"] then
             currentPos = mineCommand.minableAsteroid.translationf
@@ -223,7 +223,7 @@ function mineCommand.squadRemove(entityId, index)
     end
 end
 
-function mineCommand.onSectorChanged(x, y)
+function mineCommand.onSectorEntered(x, y)
     if mineCommand.active then
         if mineCommand.findMinableAsteroid() then
             mineCommand.getSquadsToManage()

@@ -47,23 +47,28 @@ function salvageCommand.initConfigUI(scrollframe, pos, size)
 end
 
 function salvageCommand.registerTarget()
-    if valid(salvageCommand.salvagableWreck) then
+    if salvageCommand.salvagableWreck and valid(salvageCommand.salvagableWreck) then
         return salvageCommand.salvagableWreck:registerCallback("onDestroyed", "wreckageDestroyed")
     end
 end
 
 function salvageCommand.unregisterTarget()
-    if valid(salvageCommand.salvagableWreck) then
+    if salvageCommand.salvagableWreck and valid(salvageCommand.salvagableWreck) then
         return salvageCommand.salvagableWreck:unregisterCallback("onDestroyed", "wreckageDestroyed")
     end
 end
 
 function wreckageDestroyed(index, lastDamageInflictor)
+    printlog(Entity().name, "WD Wreckage find pre")
     if salvageCommand.findWreckage() then
+        printlog(Entity().name, "WD Wreckage found")
         salvageCommand.salvage()
+        printlog(Entity().name, "WD fighters started")
     else
+        printlog(Entity().name, "WD no Wreackage")
         cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
     end
+    printlog(Entity().name, "WD End")
 end
 
 function salvageCommand.salvage()
@@ -149,7 +154,6 @@ function salvageCommand.findWreckage()
     local nearest = math.huge
     --Go after closest wreckage first
     for _, w in pairs(wreckages) do
-		w:waitUntilAsyncWorkFinished()
         local resources = sum({w:getMineableResources()})
 
         if resources ~= nil and resources > 5 and oldWreckNum ~= w.index.number and not w.isAsteroid then
@@ -219,7 +223,7 @@ function salvageCommand.squadRemove(entityId, index)
     end
 end
 
-function salvageCommand.onSectorChanged(x, y)
+function salvageCommand.onSectorEntered(x, y)
     if salvageCommand.active then
         if salvageCommand.findWreckage() then
             salvageCommand.getSquadsToManage()
@@ -233,7 +237,6 @@ end
 function salvageCommand.wreckageCreated(entity)
     if salvageCommand.active then
         if not valid(salvageCommand.salvagableWreck) then
-			entity:waitUntilAsyncWorkFinished()
             local resources = entity:getMineableResources()
             if resources ~= nil and resources > 5 then
                 salvageCommand.salvagableWreck = entity
