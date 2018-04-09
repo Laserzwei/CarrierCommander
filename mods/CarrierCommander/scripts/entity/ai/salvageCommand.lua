@@ -23,6 +23,20 @@ function salvageCommand.init()
 
 end
 
+function salvageCommand.updateServer(timestep)
+    salvageCommand.tf = salvageCommand.tf + timestep
+    if salvageCommand.tf > 60 then
+        salvageCommand.tf = 0
+        if not valid(salvageCommand.salvagableWreck) then
+            if salvageCommand.findWreckage() then
+                salvageCommand.salvage()
+            else
+                cc.applyCurrentAction(salvageCommand.prefix, salvageCommand.setSquadsIdle())
+            end
+        end
+    end
+end
+
 function salvageCommand.initConfigUI(scrollframe, pos, size)
     local label = scrollframe:createLabel(pos, "Salvaging config", 15)
     label.tooltip = "Set the behaviour once the Salvaging-operation ends"
