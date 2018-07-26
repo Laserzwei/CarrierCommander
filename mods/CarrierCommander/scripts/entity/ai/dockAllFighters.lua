@@ -1,36 +1,54 @@
+
 package.path = package.path .. ";data/scripts/lib/?.lua"
 require ("faction")
 require ("utility")
+local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 
---required Data
+-- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
+-- namespace dockAll
 dockAll = {}
-dockAll.prefix = nil
-dockAll.active = false
+
+--data
+dockAll.prefix = "dockAll"
 dockAll.squads = {}                 --[1-12] = squadIndex           --squads to manage
 dockAll.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+dockAll.disabled = false
 
---required UI
-dockAll.needsButton = true
-dockAll.inactiveButtonCaption = "Carrier - Dock All Fighters"
-dockAll.activeButtonCaption = "Carrier - Docking"                 --Notice: the activeButtonCaption shows the caption WHILE the command is active
-dockAll.activeTooltip = "Docking Fighters"
-dockAll.inactiveTooltip = "Docker - Not doing anything."
+function dockAll.initialize()
+    if onServer() then
+        print("active")
+        dockAll.getSquadsToManage()
+        dockAll.dockAllFighters()
+    end
+end
 
+function dockAll.getUpdateInterval()
+    return 1
+end
+
+function dockAll.updateServer(timestep)
+    local total, numSquads = docker.dockingFighters(dockAll.prefix, dockAll.squads)
+    print("sel to dock", total, numSquads)
+    if numSquads <= 0 then
+        broadcastInvokeClientFunction("applyStatus", -1)
+        terminate()
+    else
+        broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+    end
+end
 
 function dockAll.dockAllFighters()
     local fighterController = FighterController(Entity().index)
     if not fighterController then
-        print("Carrier - Salvage couldn't dock Fighters, Fightercontroller missing")
+        print("Carrier - dockAll couldn't dock Fighters, Fightercontroller missing")
         return
     end
-
+    local possibleCommands = _G["cc"].Config.carrierScripts
+    for _,c in pairs(possibleCommands) do
+        --Entity():removeScript(c.path..".lua")
+    end
     for _,squad in pairs(dockAll.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Return, Entity().index)
-    end
-    for prefix,command in pairs(cc.commands) do
-        if prefix ~= dockAll.prefix then    --docking command needs dockAll's squads
-            command.squads = {}
-        end
     end
 end
 
@@ -42,43 +60,35 @@ function dockAll.getSquadsToManage()
         squads[squad] = squad
     end
     dockAll.squads = squads
-end
-
---<button> is clicked button-Object onClient and prefix onServer
-function dockAll.activate(button)
-    cc.commands[dockAll.prefix].active = false
-    cc.numActiveCommands = cc.numActiveCommands - 1
-    if onClient() then
-        local pic = cc.commands[dockAll.prefix].statusPicture
-        --pic.color = ColorRGB(0.3, 0.3, 0.3)
-        pic.tooltip = cc.commands[dockAll.prefix].inactiveTooltip
-        button.caption = cc.commands[dockAll.prefix].inactiveButtonCaption
-        button.onPressedFunction = "buttonActivate"
-        buttonDeactivate(cc.commands[dockAll.prefix].activationButton)
-        return
+    --unclaim all squads from other scripts
+    local commands = _G["cc"].commands
+    for prefix,_ in pairs(commands) do
+        _G["cc"].unclaimSquads(prefix, squads)
     end
-    -- space for stuff to do e.g. scanning all squads for suitable fighters/WeaponCategories etc.
+    --claim squads for our own
+    _G["cc"].claimSquads(dockAll.prefix, squads)
 end
 
---<button> is clicked button-Object onClient and prefix onServer
-function dockAll.deactivate(button)
-    cc.numActiveCommands = cc.numActiveCommands + 1
+function dockAll.disable()
+    print("disable called")
+    broadcastInvokeClientFunction("disable")
+    broadcastInvokeClientFunction("applyStatus", -1)
+    terminate()
+end
+
+function dockAll.applyStatus(status, ...)
     if onClient() then
-        for prefix,command in pairs(cc.commands) do
-            if prefix ~= dockAll.prefix and command.active then
-                if command.deactivate then buttonDeactivate(command.activationButton) end
-            end
+        print("apply", status, ...)
+        if  _G["cc"].uiInitialized then
+            local args = {...}
+
+            local pic = _G["cc"].commands["dockAll"].statusPicture
+
+            pic.color = _G["cc"].l.actionToColorMap[status]
+            pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
+            if status == -1 then _G["cc"].commands[dockAll.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
-        return
+    else
+        print("why?")
     end
-    -- space for stuff to do e.g. landing your fighters
-    -- When docking: Make sure to not reset template.squads
-    local ai = ShipAI()
-    ai:setIdle()
-
-    dockAll.getSquadsToManage()
-    dockAll.dockAllFighters()
-    cc.applyCurrentAction(dockAll.prefix, FighterOrders.Return, Entity().name, dockAll.squads)
 end
-
-return dockAll

@@ -155,6 +155,8 @@ function cc.requestSettingsFromServer()
 end
 
 function cc.sendSettingsToClient()
+    print("Settings stored on Server")
+    printTable(cc.settings)
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
 
@@ -162,13 +164,17 @@ function cc.receiveSettings(pSettings)
     if onClient() then
         cc.settings = pSettings
         cc.client_applySettings()
+        cc.updateButtons()  --called late to ensure scripts are loaded
     end
 end
 
-function cc.docking(prefix, squad, removeSquad)
-    if not squad then print(Entity().name, "no squad", prefix, removeSquad) return end
-
-
+function cc.updateButtons()
+    for prefix, command in pairs(cc.commands) do
+        if Entity():hasScript(command.path) then
+            print("has script", command.path)
+            cc.commands[prefix].activationButton.onPressedFunction = "buttonDeactivate"
+        end
+    end
 end
 
 function cc.client_applySettings()
@@ -197,6 +203,7 @@ function cc.claimSquads(prefix, squads)
     squads = squads or {}
     for _,squad in pairs(squads) do
         if not cc.claimedSquads[squad] then
+            print(prefix, "claimed", squad)
             cc.claimedSquads[squad] = prefix
         end
     end
@@ -217,27 +224,7 @@ function cc.unclaimSquads(prefix, squads)
     for _,squad in pairs(squads) do
         if cc.claimedSquads[squad] == prefix then
             cc.claimedSquads[squad] = nil
-            _G[prefix].squads[squad] = nil
-        end
-    end
-end
-
--- sets the icon and text for the specified prefix
-function cc.applyCurrentAction(prefix, action, ...)
-    local command = cc.commands[prefix]
-    if not command then print(prefix,"is invalid command") return end
-    if onServer() then
-        broadcastInvokeClientFunction("applyCurrentAction", prefix, action, ...)
-        return
-    end
-    if cc.uiInitialized and command.statusPicture then
-        if action == FighterOrders.Return then
-            -- handled by events
-        else
-            local args = {...}
-            command.statusPicture.tooltip = string.format(cc.l.actionTostringMap[action], unpack(args))
-            command.statusPicture.color = cc.l.actionToColorMap[action]
-
+            if _G[prefix] then _G[prefix].squads[squad] = nil; print(prefix, "unclaimed", squad) end
         end
     end
 end
@@ -296,9 +283,10 @@ function cc.StopAutoAssign()
         cc.autoAssignButton.caption = "Carrier - Auto Assign"
         cc.autoAssignButton.onPressedFunction = "autoAssign"
         for prefix,command in pairs(cc.commands) do
-            if command.deactivate and prefix ~= "dockAll" then buttonDeactivate(command.activationButton) end
+            if Entity():hasScript(command.path) and prefix ~= "dockAll" then
+                _G[prefix].disable()
+            end
         end
-        return
     end
 end
 

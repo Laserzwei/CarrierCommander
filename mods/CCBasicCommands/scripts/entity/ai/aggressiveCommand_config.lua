@@ -11,7 +11,7 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-    cc.l.uiElementToSettingMap[comboBox.index] = aggressiveCommand.prefix.."attackStopOrder"
+    cc.l.uiElementToSettingMap[comboBox.index] = "attackStopOrder"
     cc.addOrdersToCombo(comboBox)
     pos = pos + vec2(0,35)
     --attack Civils
@@ -23,14 +23,14 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Attack Stations", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackStations"
+    cc.l.uiElementToSettingMap[checkBox.index] = "attackStations"
     checkBox.tooltip = "Determines wether enemy stations will be attacked (checked), or not (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Aggressive Targetting", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = aggressiveCommand.prefix.."attackNN"
+    cc.l.uiElementToSettingMap[checkBox.index] = "attackNN"
     checkBox.tooltip = "Attack ship closest to squad (checked), or closest to ship (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14

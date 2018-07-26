@@ -15,7 +15,7 @@ function salvageCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Salvage Nearest", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = salvageCommand.prefix.."salvageNN"
+    cc.l.uiElementToSettingMap[checkBox.index] = "salvageNN"
     checkBox.tooltip = "Fighters will target the nearest wreckage to the last one salvaged (checked), \nor the one nearest to the mothership (unchecked)."
     checkBox.captionLeft = false
     checkBox.fontSize = 14

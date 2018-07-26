@@ -2,6 +2,7 @@
 package.path = package.path .. ";data/scripts/lib/?.lua"
 require ("faction")
 require ("utility")
+local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace mine
@@ -24,13 +25,12 @@ function mine.initialize()
 end
 
 function mine.getUpdateInterval()
-    if not valid(mine.target) then return 15 end
-
+    if not valid(mine.target) and mine.disabled == false then return 15 end
+    if valid(mine.target) and mine.disabled == false then return 5 end
     return 1
 end
 
 function mine.updateServer(timestep)
-    print("tar", valid(mine.target))
     if not valid(mine.target) then
         if mine.getSquadsToManage() then
             if mine.findMinableAsteroid() then
@@ -40,12 +40,14 @@ function mine.updateServer(timestep)
                 mine.setSquadsIdle()
                 if mine.order == FighterOrders.Return then
 
-                    local total, numSquads = mine.dockingFighters()
+                    local total, numSquads = docker.dockingFighters(mine.prefix, mine.squads)
                     if numSquads <= 0 then
                         broadcastInvokeClientFunction("applyStatus", "idle")
                     else
                         broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
                     end
+                else
+                    broadcastInvokeClientFunction("applyStatus", "idle")
                 end
             end
         else
@@ -56,9 +58,9 @@ function mine.updateServer(timestep)
     end
     if mine.disabled == true then
         if mine.order == FighterOrders.Return then
-            mine.squads = _G["cc"].claimSquads(mine.prefix, squads)
+            mine.squads = _G["cc"].claimSquads(mine.prefix, mine.squads)
 
-            local total, numSquads = mine.dockingFighters()
+            local total, numSquads = docker.dockingFighters(mine.prefix, mine.squads)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
@@ -73,33 +75,18 @@ function mine.updateServer(timestep)
     end
 end
 
-function mine.dockingFighters()
-    local total, numSquads = 0, 0
-    for _,squad in pairs(mine.squads) do
-        local hangar = Hangar(Entity().index)
-        local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
 
-        if missingFighters > 0 then
-            total = total + missingFighters
-            numSquads = numSquads + 1
-        else
-            _G["cc"].unclaimSquads(mine.prefix, {squad})
-        end
-    end
-    return total, numSquads
-end
-
+--TODO remove
 function mine.updateClient(timestep)
     if checkAfterInit and _G["cc"].uiInitialized then
         checkAfterInit = false
-        print("oh no")
-        _G["cc"].commands[mine.prefix].activationButton.onPressedFunction = "buttonDeactivate"
+        --_G["cc"].commands[mine.prefix].activationButton.onPressedFunction = "buttonDeactivate"
     end
 end
 
 function mine.applyStatus(status, ...)
     if onClient() then
-        print(status, ...)
+        print("mine", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -107,6 +94,7 @@ function mine.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
+            if status == -1 then _G["cc"].commands[mine.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")
@@ -116,12 +104,12 @@ end
 -- set final orders for all controlled squads
 function mine.disable()
     mine.disabled = true
-    mine.target = Entity()
+    mine.target = nil
     mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
     mine.squads = _G["cc"].getClaimedSquads(mine.prefix)
     for _,squad in pairs(mine.squads) do
-        fighterController:setSquadOrders(squad, mine.order, mine.target.index)
+        fighterController:setSquadOrders(squad, mine.order, Entity().index)
     end
 
     if mine.order ~= FighterOrders.Return then
@@ -164,8 +152,8 @@ function mine.findMinableAsteroid()
     local currentPos
 
     --Cwhizard's Nearest-Neighbor
-    if cc.settings[mine.prefix.."mineNN"] then
-        currentPos = mine.target.translationf or ship.translationf
+    if cc.settings["mineNN"] then
+        currentPos = mine.target and mine.target.translationf or ship.translationf
     else
         currentPos = ship.translationf
     end
@@ -176,7 +164,7 @@ function mine.findMinableAsteroid()
     --Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
-        if ((resources ~= nil and resources > 0) or cc.settings[mine.prefix.."mineAllSetting"]) then
+        if ((resources ~= nil and resources > 0) or cc.settings["mineAllSetting"]) then
             local dist = distance2(a.translationf, currentPos)
             if dist < nearest then
                 nearest = dist
@@ -199,7 +187,7 @@ end
 function mine.secure()
     local data = {}
     data.squads= mine.squads
-    if mine.target then data.target = mine.target.index.string end
+    if valid(mine.target) then data.target = mine.target.index.string end
     data.order = mine.order
     data.disabled = mine.disabled
     return data

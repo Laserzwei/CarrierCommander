@@ -1,5 +1,4 @@
 local mineCommand = {}
-mineCommand.prefix = "mine"
 
 function mineCommand.initConfigUI(scrollframe, pos, size)
     local label = scrollframe:createLabel(pos, "Mining config", 15)
@@ -10,19 +9,19 @@ function mineCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local comboBox = scrollframe:createValueComboBox(Rect(pos+vec2(35,5),pos+vec2(200,25)), "onComboBoxSelected")
-    cc.l.uiElementToSettingMap[comboBox.index] = mineCommand.prefix.."mineStopOrder"
+    cc.l.uiElementToSettingMap[comboBox.index] = "mineStopOrder"
     cc.addOrdersToCombo(comboBox)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine all Asteroids", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = mineCommand.prefix.."mineAllSetting"
+    cc.l.uiElementToSettingMap[checkBox.index] ="mineAllSetting"
     checkBox.tooltip = "Determines wether all asteroids in a sector (checked), \nor only resource asteroids (unchecked) will be mined."
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine Nearest", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = mineCommand.prefix.."mineNN"
+    cc.l.uiElementToSettingMap[checkBox.index] = "mineNN"
     checkBox.tooltip = "Fighters will target the nearest asteroid to the last one mined (checked), \nor the one nearest to the mothership (unchecked)."
     checkBox.captionLeft = false
     checkBox.fontSize = 14

@@ -2,6 +2,7 @@
 package.path = package.path .. ";data/scripts/lib/?.lua"
 require ("faction")
 require ("utility")
+local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace salvage
@@ -24,13 +25,12 @@ function salvage.initialize()
 end
 
 function salvage.getUpdateInterval()
-    if not valid(salvage.target) then return 15 end
+    if not valid(salvage.target) and salvage.disabled == false then return 15 end
 
     return 1
 end
 
 function salvage.updateServer(timestep)
-    print("tar", valid(salvage.target))
     if not valid(salvage.target) then
         if salvage.getSquadsToManage() then
             if salvage.findWreckage() then
@@ -40,25 +40,26 @@ function salvage.updateServer(timestep)
                 salvage.setSquadsIdle()
                 if salvage.order == FighterOrders.Return then
 
-                    local total, numSquads = salvage.dockingFighters()
+                    local total, numSquads = docker.dockingFighters(salvage.prefix, salvage.squads)
                     if numSquads <= 0 then
                         broadcastInvokeClientFunction("applyStatus", "idle")
                     else
                         broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
                     end
+                else
+                    broadcastInvokeClientFunction("applyStatus", "idle")
                 end
             end
         else
             broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
         end
     else
-
     end
     if salvage.disabled == true then
         if salvage.order == FighterOrders.Return then
-            salvage.squads = _G["cc"].claimSquads(salvage.prefix, squads)
+            salvage.squads = _G["cc"].claimSquads(salvage.prefix, salvage.squads)
 
-            local total, numSquads = salvage.dockingFighters()
+            local total, numSquads = docker.dockingFighters(salvage.prefix, salvage.squads)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
@@ -73,33 +74,18 @@ function salvage.updateServer(timestep)
     end
 end
 
-function salvage.dockingFighters()
-    local total, numSquads = 0, 0
-    for _,squad in pairs(salvage.squads) do
-        local hangar = Hangar(Entity().index)
-        local missingFighters = (12 -hangar:getSquadFreeSlots(squad)) -  hangar:getSquadFighters(squad)
 
-        if missingFighters > 0 then
-            total = total + missingFighters
-            numSquads = numSquads + 1
-        else
-            _G["cc"].unclaimSquads(salvage.prefix, {squad})
-        end
-    end
-    return total, numSquads
-end
-
+--TODO remove
 function salvage.updateClient(timestep)
     if checkAfterInit and _G["cc"].uiInitialized then
         checkAfterInit = false
-        print("oh no")
-        _G["cc"].commands[salvage.prefix].activationButton.onPressedFunction = "buttonDeactivate"
+        --_G["cc"].commands[salvage.prefix].activationButton.onPressedFunction = "buttonDeactivate"
     end
 end
 
 function salvage.applyStatus(status, ...)
     if onClient() then
-        print(status, ...)
+        print("salvage", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -107,6 +93,7 @@ function salvage.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
+            if status == -1 then _G["cc"].commands[salvage.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")
@@ -116,12 +103,12 @@ end
 -- set final orders for all controlled squads
 function salvage.disable()
     salvage.disabled = true
-    salvage.target = Entity()
+    salvage.target = nil
     salvage.order = _G["cc"].settings.salvageStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
     salvage.squads = _G["cc"].getClaimedSquads(salvage.prefix)
     for _,squad in pairs(salvage.squads) do
-        fighterController:setSquadOrders(squad, salvage.order, salvage.target.index)
+        fighterController:setSquadOrders(squad, salvage.order, Entity().index)
     end
 
     if salvage.order ~= FighterOrders.Return then
@@ -164,8 +151,8 @@ function salvage.findWreckage()
     local currentPos
 
     --Cwhizard's Nearest-Neighbor
-    if cc.settings[salvage.prefix.."salvageNN"] then
-        currentPos = salvage.target.translationf or ship.translationf
+    if cc.settings["salvageNN"] then
+        currentPos = salvage.target and salvage.target.translationf or ship.translationf
     else
         currentPos = ship.translationf
     end
@@ -185,7 +172,6 @@ function salvage.findWreckage()
             end
         end
     end
-
     return valid(salvage.target)
 end
 
@@ -200,7 +186,7 @@ end
 function salvage.secure()
     local data = {}
     data.squads= salvage.squads
-    if salvage.target then data.target = salvage.target.index.string end
+    if valid(salvage.target) then data.target = salvage.target.index.string end
     data.order = salvage.order
     data.disabled = salvage.disabled
     return data
