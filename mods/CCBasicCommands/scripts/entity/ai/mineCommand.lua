@@ -7,6 +7,7 @@ local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace mine
 mine = {}
+docker.integrate(mine)
 
 --data
 mine.prefix = "mine"
@@ -31,36 +32,38 @@ function mine.getUpdateInterval()
 end
 
 function mine.updateServer(timestep)
-    if not valid(mine.target) then
-        if mine.getSquadsToManage() then
-            if mine.findMinableAsteroid() then
-                broadcastInvokeClientFunction("applyStatus", 6)
-                mine.mine()
-            else
-                mine.setSquadsIdle()
-                if mine.order == FighterOrders.Return then
-
-                    local total, numSquads = docker.dockingFighters(mine.prefix, mine.squads)
-                    if numSquads <= 0 then
-                        broadcastInvokeClientFunction("applyStatus", "idle")
-                    else
-                        broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
-                    end
+    if mine.disabled == false then
+        if not valid(mine.target) then
+            if mine.getSquadsToManage() then
+                if mine.findMinableAsteroid() then
+                    broadcastInvokeClientFunction("applyStatus", 5)
+                    mine.mine()
                 else
-                    broadcastInvokeClientFunction("applyStatus", "idle")
+                    mine.setSquadsIdle()
+                    if mine.order == FighterOrders.Return then
+
+                        local total, numSquads = mine.dockingFighters(mine.prefix, mine.squads)
+                        if numSquads <= 0 then
+                            broadcastInvokeClientFunction("applyStatus", "idle")
+                        else
+                            broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+                        end
+                    else
+                        broadcastInvokeClientFunction("applyStatus", "idle")
+                    end
                 end
+            else
+                broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
             end
         else
-            broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
+
         end
     else
-
-    end
-    if mine.disabled == true then
+        mine.setSquadsIdle()
         if mine.order == FighterOrders.Return then
             mine.squads = _G["cc"].claimSquads(mine.prefix, mine.squads)
 
-            local total, numSquads = docker.dockingFighters(mine.prefix, mine.squads)
+            local total, numSquads = mine.dockingFighters(mine.prefix, mine.squads)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
@@ -86,7 +89,6 @@ end
 
 function mine.applyStatus(status, ...)
     if onClient() then
-        print("mine", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -94,7 +96,6 @@ function mine.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
-            if status == -1 then _G["cc"].commands[mine.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")
@@ -113,7 +114,7 @@ function mine.disable()
     end
 
     if mine.order ~= FighterOrders.Return then
-        _G["cc"].unclaimSquads(mine.squads)
+        _G["cc"].unclaimSquads(mine.prefix, mine.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
         terminate()
     end
@@ -153,7 +154,7 @@ function mine.findMinableAsteroid()
 
     --Cwhizard's Nearest-Neighbor
     if cc.settings["mineNN"] then
-        currentPos = mine.target and mine.target.translationf or ship.translationf
+        currentPos = valid(mine.target) and mine.target.translationf or ship.translationf
     else
         currentPos = ship.translationf
     end
@@ -187,7 +188,6 @@ end
 function mine.secure()
     local data = {}
     data.squads= mine.squads
-    if valid(mine.target) then data.target = mine.target.index.string end
     data.order = mine.order
     data.disabled = mine.disabled
     return data
@@ -195,7 +195,6 @@ end
 
 function mine.restore(dataIn)
     mine.squads = dataIn.squads
-    if dataIn.target then mine.target =  Entity(Uuid(dataIn.target)) end
     mine.order = dataIn.order
     mine.disabled = dataIn.disabled or false
 end

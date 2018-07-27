@@ -7,6 +7,7 @@ local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace salvage
 salvage = {}
+docker.integrate(salvage)
 
 --data
 salvage.prefix = "salvage"
@@ -18,7 +19,7 @@ local checkAfterInit = true
 
 function salvage.initialize()
     if onServer() then
-
+        --salvage.updateServer(0)
     else
         salvage.applyStatus("idle")
     end
@@ -31,35 +32,37 @@ function salvage.getUpdateInterval()
 end
 
 function salvage.updateServer(timestep)
-    if not valid(salvage.target) then
-        if salvage.getSquadsToManage() then
-            if salvage.findWreckage() then
-                broadcastInvokeClientFunction("applyStatus", 6)
-                salvage.salvage()
-            else
-                salvage.setSquadsIdle()
-                if salvage.order == FighterOrders.Return then
-
-                    local total, numSquads = docker.dockingFighters(salvage.prefix, salvage.squads)
-                    if numSquads <= 0 then
-                        broadcastInvokeClientFunction("applyStatus", "idle")
-                    else
-                        broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
-                    end
+    if salvage.disabled == false then
+        if not valid(salvage.target) then
+            if salvage.getSquadsToManage() then
+                if salvage.findWreckage() then
+                    broadcastInvokeClientFunction("applyStatus", 6)
+                    salvage.salvage()
                 else
-                    broadcastInvokeClientFunction("applyStatus", "idle")
+                    salvage.setSquadsIdle()
+                    if salvage.order == FighterOrders.Return then
+
+                        local total, numSquads = salvage.dockingFighters(salvage.prefix, salvage.squads)
+                        if numSquads <= 0 then
+                            broadcastInvokeClientFunction("applyStatus", "idle")
+                        else
+                            broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+                        end
+                    else
+                        broadcastInvokeClientFunction("applyStatus", "idle")
+                    end
                 end
+            else
+                broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
             end
         else
-            broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
         end
     else
-    end
-    if salvage.disabled == true then
+        salvage.setSquadsIdle()
         if salvage.order == FighterOrders.Return then
             salvage.squads = _G["cc"].claimSquads(salvage.prefix, salvage.squads)
 
-            local total, numSquads = docker.dockingFighters(salvage.prefix, salvage.squads)
+            local total, numSquads = salvage.dockingFighters(salvage.prefix, salvage.squads)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
@@ -85,7 +88,6 @@ end
 
 function salvage.applyStatus(status, ...)
     if onClient() then
-        print("salvage", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -93,7 +95,6 @@ function salvage.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
-            if status == -1 then _G["cc"].commands[salvage.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")
@@ -112,7 +113,7 @@ function salvage.disable()
     end
 
     if salvage.order ~= FighterOrders.Return then
-        _G["cc"].unclaimSquads(salvage.squads)
+        _G["cc"].unclaimSquads(salvage.prefix, salvage.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
         terminate()
     end
@@ -152,7 +153,7 @@ function salvage.findWreckage()
 
     --Cwhizard's Nearest-Neighbor
     if cc.settings["salvageNN"] then
-        currentPos = salvage.target and salvage.target.translationf or ship.translationf
+        currentPos = valid(salvage.target) and salvage.target.translationf or ship.translationf
     else
         currentPos = ship.translationf
     end

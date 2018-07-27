@@ -7,6 +7,7 @@ local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace dockAll
 dockAll = {}
+docker.integrate(dockAll)
 
 --data
 dockAll.prefix = "dockAll"
@@ -16,7 +17,6 @@ dockAll.disabled = false
 
 function dockAll.initialize()
     if onServer() then
-        print("active")
         dockAll.getSquadsToManage()
         dockAll.dockAllFighters()
     end
@@ -27,8 +27,7 @@ function dockAll.getUpdateInterval()
 end
 
 function dockAll.updateServer(timestep)
-    local total, numSquads = docker.dockingFighters(dockAll.prefix, dockAll.squads)
-    print("sel to dock", total, numSquads)
+    local total, numSquads = dockAll.dockingFighters(dockAll.prefix, dockAll.squads)
     if numSquads <= 0 then
         broadcastInvokeClientFunction("applyStatus", -1)
         terminate()
@@ -70,15 +69,12 @@ function dockAll.getSquadsToManage()
 end
 
 function dockAll.disable()
-    print("disable called")
-    broadcastInvokeClientFunction("disable")
     broadcastInvokeClientFunction("applyStatus", -1)
     terminate()
 end
 
 function dockAll.applyStatus(status, ...)
     if onClient() then
-        print("apply", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -86,7 +82,6 @@ function dockAll.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
-            if status == -1 then _G["cc"].commands[dockAll.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")

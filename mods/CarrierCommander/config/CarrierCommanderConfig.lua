@@ -11,13 +11,12 @@ Config.version = {
     end
 }
 
---new commands go here, <namespcae used in the script> = {name = <name of your command>, <path> = relative path from the /mods/-folder to the command, without .lua ending }
+--new commands go here, <namespcae used by the script> = {name = <button text>, <path> = relative path from the /mods/-folder to the command, without .lua ending }
 Config.carrierScripts = {
     dockAll = {name="Dock all Fighters", path = "mods/CarrierCommander/scripts/entity/ai/dockAllFighters"},
     salvage = {name="Salvage Command", path = "mods/CCBasicCommands/scripts/entity/ai/salvageCommand"},
     mine = {name="Mine Command", path = "mods/CCBasicCommands/scripts/entity/ai/mineCommand"},
     attack = {name="Aggressive Command", path = "mods/CCBasicCommands/scripts/entity/ai/aggressiveCommand"},
-    --dummyCommand = {name="Dummy Command", path = "mods/dummyCarrierCommands/scripts/entity/ai/dummyCommand"}
 }
 
 

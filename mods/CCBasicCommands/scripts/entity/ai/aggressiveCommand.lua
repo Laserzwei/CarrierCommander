@@ -7,6 +7,8 @@ local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace attack
 attack = {}
+docker.integrate(attack)
+
 attack.prefix = "attack"
 attack.squads = {}               --[squadIndex] = squadIndex           --squads to manage
 attack.controlledFighters = {}   --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
@@ -14,7 +16,11 @@ attack.disabled = false
 attack.hostileThreshold = -40000
 
 function attack.initialize()
-    print("attack")
+    if onServer() then
+        --attack.updateServer(0)
+    else
+        attack.applyStatus("idle")
+    end
 end
 
 function attack.getUpdateInterval()
@@ -24,45 +30,44 @@ function attack.getUpdateInterval()
 end
 
 function attack.updateServer(timestep)
-    if not valid(attack.target) then
+    if attack.disabled == false then
+        if not valid(attack.target) then
 
-        if attack.getSquadsToManage() then
-            if attack.findEnemy() then
-                broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
-                attack.attack()
-            else
-                attack.setSquadsIdle()
-                if attack.order == FighterOrders.Return then
-
-                    local total, numSquads = docker.dockingFighters(attack.prefix, attack.squads)
-                    if numSquads <= 0 then
-                        broadcastInvokeClientFunction("applyStatus", "idle")
-                    else
-                        broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
-                    end
+            if attack.getSquadsToManage() then
+                if attack.findEnemy() then
+                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
+                    attack.attack()
                 else
-                    print("T")
-                    broadcastInvokeClientFunction("applyStatus", "idle")
+                    attack.setSquadsIdle()
+                    if attack.order == FighterOrders.Return then
+
+                        local total, numSquads = attack.dockingFighters(attack.prefix, attack.squads)
+                        if numSquads <= 0 then
+                            broadcastInvokeClientFunction("applyStatus", "idle")
+                        else
+                            broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+                        end
+                    else
+                        broadcastInvokeClientFunction("applyStatus", "idle")
+                    end
                 end
+            else
+                broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
             end
         else
-            print("b")
-            broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
-        end
-    else
-        print("target", attack.target.name)
-        if attack.getSquadsToManage() then
-            if attack.findEnemy(attack.target.index) then
-                broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
-                attack.attack()
+            if attack.getSquadsToManage() then
+                if attack.findEnemy(attack.target.index) then
+                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
+                    attack.attack()
+                end
             end
         end
-    end
-    if attack.disabled == true then
+    else
+        attack.setSquadsIdle()
         if attack.order == FighterOrders.Return then
             attack.squads = _G["cc"].claimSquads(attack.prefix, attack.squads)
 
-            local total, numSquads = docker.dockingFighters(attack.prefix, attack.squads)
+            local total, numSquads = attack.dockingFighters(attack.prefix, attack.squads)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
@@ -90,7 +95,7 @@ function attack.disable()
     end
 
     if attack.order ~= FighterOrders.Return then
-        _G["cc"].unclaimSquads(attack.squads)
+        _G["cc"].unclaimSquads(attack.prefix, attack.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
         terminate()
     end
@@ -98,7 +103,6 @@ end
 
 function attack.applyStatus(status, ...)
     if onClient() then
-        print("attack", status, ...)
         if  _G["cc"].uiInitialized then
             local args = {...}
 
@@ -106,7 +110,6 @@ function attack.applyStatus(status, ...)
 
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
-            if status == -1 then _G["cc"].commands[attack.prefix].activationButton.onPressedFunction = "buttonActivate" end
         end
     else
         print("why?")
@@ -152,7 +155,7 @@ function attack.findEnemy(ignoredEntityIndex)
 
         --Cwhizard's Nearest-Neighbor
         if _G["cc"].settings["attackNN"] then
-            currentPos = attack.target and attack.target.translationf or ship.translationf
+            currentPos = valid(attack.target) and attack.target.translationf or ship.translationf
         else
             currentPos = ship.translationf
         end
@@ -270,7 +273,6 @@ end
 function attack.secure()
     local data = {}
     data.squads= attack.squads
-    if valid(attack.target) then data.target = attack.target.index.string end
     data.order = attack.order
     data.disabled = attack.disabled
     return data
@@ -278,7 +280,6 @@ end
 
 function attack.restore(dataIn)
     attack.squads = dataIn.squads
-    if dataIn.target then attack.target =  Entity(Uuid(dataIn.target)) end
     attack.order = dataIn.order
     attack.disabled = dataIn.disabled or false
 end

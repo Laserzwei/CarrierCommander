@@ -97,7 +97,7 @@ function cc.initUI()
     table.sort(sortedPrefixes)
     for _,prefix in ipairs(sortedPrefixes) do
         local command = cc.commands[prefix]
-        local button = tab:createButton(ButtonRect(), command.name, "buttonActivate")
+        local button = tab:createButton(ButtonRect(), command.name..(" [A]"), "buttonActivate")
         button.textSize = 18
         button.maxTextSize = 18
         local pic = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
@@ -155,8 +155,6 @@ function cc.requestSettingsFromServer()
 end
 
 function cc.sendSettingsToClient()
-    print("Settings stored on Server")
-    printTable(cc.settings)
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
 
@@ -171,8 +169,8 @@ end
 function cc.updateButtons()
     for prefix, command in pairs(cc.commands) do
         if Entity():hasScript(command.path) then
-            print("has script", command.path)
-            cc.commands[prefix].activationButton.onPressedFunction = "buttonDeactivate"
+            command.activationButton.caption = command.name.." [D]"
+            command.activationButton.onPressedFunction = "buttonDeactivate"
         end
     end
 end
@@ -203,7 +201,6 @@ function cc.claimSquads(prefix, squads)
     squads = squads or {}
     for _,squad in pairs(squads) do
         if not cc.claimedSquads[squad] then
-            print(prefix, "claimed", squad)
             cc.claimedSquads[squad] = prefix
         end
     end
@@ -224,7 +221,7 @@ function cc.unclaimSquads(prefix, squads)
     for _,squad in pairs(squads) do
         if cc.claimedSquads[squad] == prefix then
             cc.claimedSquads[squad] = nil
-            if _G[prefix] then _G[prefix].squads[squad] = nil; print(prefix, "unclaimed", squad) end
+            if _G[prefix] then _G[prefix].squads[squad] = nil end
         end
     end
 end
@@ -233,10 +230,11 @@ function cc.buttonActivate(button)
     if onClient() then
         local prefix = cc.buttons[button.index]
         invokeServerFunction("buttonActivate", prefix)
-        button.caption = cc.commands[prefix].name
-        button.onPressedFunction = "buttonDeactivate"
+        if prefix ~= "dockAll" then
+            button.caption = cc.commands[prefix].name.." [D]"
+            button.onPressedFunction = "buttonDeactivate"
+        end
     else
-        print("add script", cc.commands[button].path, Entity():hasScript(cc.commands[button].path))
         Entity():addScriptOnce(cc.commands[button].path)
     end
 end
@@ -249,12 +247,11 @@ function cc.buttonDeactivate(button)
         local pic = cc.commands[prefix].statusPicture
         pic.color = cc.l.actionToColorMap[-1]
         pic.tooltip = cc.l.actionTostringMap[-1]
-        button.caption = cc.commands[prefix].name
+        button.caption = cc.commands[prefix].name.." [A]"
         button.onPressedFunction = "buttonActivate"
     else
-        print("remove script", cc.commands[button].path, Entity():hasScript(cc.commands[button].path))
         if _G[button] then
-            _G[button].disable()
+            Entity():invokeFunction(cc.commands[button].path..".lua", "disable")
         end
     end
 end
@@ -265,14 +262,18 @@ function cc.autoAssign()
         cc.autoAssignPicture.color = ColorRGB(0.1, 0.8, 0.1)
         cc.autoAssignButton.caption = "Carrier - Stop Assigning"
         cc.autoAssignButton.onPressedFunction = "StopAutoAssign"
+        for prefix,command in pairs(cc.commands) do
+            if prefix ~= "dockAll" then
+                command.activationButton.caption = command.name.." [D]"
+            end
+        end
+    else
         local ship = Entity()
         for prefix,command in pairs(cc.commands) do
             if prefix ~= "dockAll" then
                 ship:addScriptOnce(command.path)
             end
         end
-    else
-
     end
 end
 
@@ -283,8 +284,14 @@ function cc.StopAutoAssign()
         cc.autoAssignButton.caption = "Carrier - Auto Assign"
         cc.autoAssignButton.onPressedFunction = "autoAssign"
         for prefix,command in pairs(cc.commands) do
+            if prefix ~= "dockAll" then
+                command.activationButton.caption = command.name.." [A]"
+            end
+        end
+    else
+        for prefix,command in pairs(cc.commands) do
             if Entity():hasScript(command.path) and prefix ~= "dockAll" then
-                _G[prefix].disable()
+                Entity():invokeFunction(command.path..".lua", "disable")
             end
         end
     end
