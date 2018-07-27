@@ -114,7 +114,7 @@ function cc.initUI()
     cc.autoAssignButton.maxTextSize = 18
     cc.autoAssignPicture = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
     cc.autoAssignPicture.isIcon = true
-    cc.autoAssignPicture.tooltip = cc.l.actionTostringMap[-1]
+    --cc.autoAssignPicture.tooltip = cc.l.actionTostringMap[-1]
     cc.autoAssignPicture.color = cc.l.actionToColorMap[-1]
     "==========================================================================================="
     "==================================  CONFIG TAB ============================================"
