@@ -3,7 +3,7 @@ local Config = {}
 Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei"
 Config.ModName = "CarrierCommander"
 Config.version = {
-    major=0, minor=10, patch = 2,
+    major=1, minor=7, patch = 0,
     string = function()
         return  Config.version.major .. '.' ..
                 Config.version.minor .. '.' ..
@@ -17,6 +17,7 @@ Config.carrierScripts = {
     salvage = {name="Salvage Command", path = "mods/CCBasicCommands/scripts/entity/ai/salvageCommand"},
     mine = {name="Mine Command", path = "mods/CCBasicCommands/scripts/entity/ai/mineCommand"},
     attack = {name="Aggressive Command", path = "mods/CCBasicCommands/scripts/entity/ai/aggressiveCommand"},
+    --lootCommand = {name="Loot Command", path = "mods/CCLootPlugin/scripts/entity/ai/lootCommand"}
 }
 
 

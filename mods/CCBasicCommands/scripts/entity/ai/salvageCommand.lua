@@ -77,15 +77,6 @@ function salvage.updateServer(timestep)
     end
 end
 
-
---TODO remove
-function salvage.updateClient(timestep)
-    if checkAfterInit and _G["cc"].uiInitialized then
-        checkAfterInit = false
-        --_G["cc"].commands[salvage.prefix].activationButton.onPressedFunction = "buttonDeactivate"
-    end
-end
-
 function salvage.applyStatus(status, ...)
     if onClient() then
         if  _G["cc"].uiInitialized then
