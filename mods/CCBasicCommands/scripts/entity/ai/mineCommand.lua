@@ -78,15 +78,6 @@ function mine.updateServer(timestep)
     end
 end
 
-
---TODO remove
-function mine.updateClient(timestep)
-    if checkAfterInit and _G["cc"].uiInitialized then
-        checkAfterInit = false
-        --_G["cc"].commands[mine.prefix].activationButton.onPressedFunction = "buttonDeactivate"
-    end
-end
-
 function mine.applyStatus(status, ...)
     if onClient() then
         if  _G["cc"].uiInitialized then
