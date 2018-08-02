@@ -16,7 +16,7 @@ Config.carrierScripts = {
     dockAll = {name="Dock all Fighters", path = "mods/CarrierCommander/scripts/entity/ai/dockAllFighters"},
     salvage = {name="Salvage Command", path = "mods/CCBasicCommands/scripts/entity/ai/salvageCommand"},
     mine = {name="Mine Command", path = "mods/CCBasicCommands/scripts/entity/ai/mineCommand"},
-    attack = {name="Aggressive Command", path = "mods/CCBasicCommands/scripts/entity/ai/aggressiveCommand"},
+    attack = {name="Attack Command", path = "mods/CCBasicCommands/scripts/entity/ai/aggressiveCommand"},
     --lootCommand = {name="Loot Command", path = "mods/CCLootPlugin/scripts/entity/ai/lootCommand"}
 }
 

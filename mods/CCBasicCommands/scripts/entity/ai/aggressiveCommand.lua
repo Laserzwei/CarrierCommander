@@ -56,7 +56,7 @@ function attack.updateServer(timestep)
             end
         else
             if attack.getSquadsToManage() then
-                if attack.findEnemy(attack.target.index) then
+                if attack.findEnemy() then
                     broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
                     attack.attack()
                 end
@@ -147,7 +147,7 @@ end
 
 -- check the sector for an enemy that can be attacked.
 -- if there is one, assign target
-function attack.findEnemy(ignoredEntityIndex)
+function attack.findEnemy()
     local shipAI = ShipAI(Entity().index)
     if shipAI:isEnemyPresent(attack.hostileThreshold) then
         local ship = Entity()
@@ -163,10 +163,10 @@ function attack.findEnemy(ignoredEntityIndex)
 
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
-        local priority = 0
+        local priority = valid(attack.target) and attack.getPriority(attack.target) or 0
         local hasTargetChanged = false
         for _, e in pairs(entities) do
-            if attack.checkEnemy(e, ignoredEntityIndex) then
+            if attack.checkEnemy(e) then
                 local p = attack.getPriority(e)
                 local dist = distance2(e.translationf, currentPos)
                 if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
@@ -186,7 +186,7 @@ function attack.findEnemy(ignoredEntityIndex)
 
         --Cwhizard's Nearest-Neighbor
         if _G["cc"].settings["attackNN"] then
-            currentPos = attack.target.translationf or ship.translationf
+            currentPos = valid(attack.target) and attack.target.translationf or ship.translationf
         else
             currentPos = ship.translationf
         end
@@ -196,7 +196,7 @@ function attack.findEnemy(ignoredEntityIndex)
         local priority = 0
         local xsotanships = {Sector():getEntitiesByFaction(xsotan.index) }
         for _, e in pairs(xsotanships) do
-            if attack.checkEnemy(e, ignoredEntityIndex) then
+            if attack.checkEnemy(e) then
                 local p = attack.getPriority(e)
                 local dist = distance2(e.translationf, currentPos)
                 if ((dist < nearest and priority <= p) or (priority < p)) then -- get a new target
@@ -233,9 +233,8 @@ function attack.getPriority(entity)
     return priority
 end
 --checks for hostility, xsotan ownership, civil-config, station-config
-function attack.checkEnemy(e, ignored)
+function attack.checkEnemy(e)
     if not valid(e) then return false end
-    if ignored and e.index.number == ignored.number then return false end
     local faction = Faction()
     local b = false
     if e.factionIndex and faction:getRelations(e.factionIndex) <= attack.hostileThreshold then -- low faction
