@@ -264,6 +264,7 @@ function cc.autoAssign()
         cc.autoAssignButton.onPressedFunction = "StopAutoAssign"
         for prefix,command in pairs(cc.commands) do
             if prefix ~= "dockAll" then
+                command.activationButton.onPressedFunction = "buttonDeactivate"
                 command.activationButton.caption = command.name.." [D]"
             end
         end
@@ -285,6 +286,7 @@ function cc.StopAutoAssign()
         cc.autoAssignButton.onPressedFunction = "autoAssign"
         for prefix,command in pairs(cc.commands) do
             if prefix ~= "dockAll" then
+                command.activationButton.onPressedFunction = "buttonActivate"
                 command.activationButton.caption = command.name.." [A]"
             end
         end
