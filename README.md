@@ -27,3 +27,5 @@ else
 end
 ```
 and check your Logs in %appdata%/avorion/... .
+
+additionally place the contents of /data/ in /Avorion/data/
