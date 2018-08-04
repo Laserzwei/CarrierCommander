@@ -35,7 +35,7 @@ function attack.updateServer(timestep)
 
             if attack.getSquadsToManage() then
                 if attack.findEnemy() then
-                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
+                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name or "")
                     attack.attack()
                 else
                     attack.setSquadsIdle()
@@ -57,7 +57,7 @@ function attack.updateServer(timestep)
         else
             if attack.getSquadsToManage() then
                 if attack.findEnemy() then
-                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name)
+                    broadcastInvokeClientFunction("applyStatus", FighterOrders.Attack, attack.target.name or "")
                     attack.attack()
                 end
             end

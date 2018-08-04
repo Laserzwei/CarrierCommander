@@ -109,13 +109,6 @@ function cc.initUI()
         cc.buttons[button.index] = prefix
     end
 
-    cc.autoAssignButton = tab:createButton(ButtonRect(), "Carrier - Auto Assign", "autoAssign")
-    cc.autoAssignButton.textSize = 18
-    cc.autoAssignButton.maxTextSize = 18
-    cc.autoAssignPicture = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
-    cc.autoAssignPicture.isIcon = true
-    --cc.autoAssignPicture.tooltip = cc.l.actionTostringMap[-1]
-    cc.autoAssignPicture.color = cc.l.actionToColorMap[-1]
     "==========================================================================================="
     "==================================  CONFIG TAB ============================================"
     "==========================================================================================="
@@ -252,49 +245,6 @@ function cc.buttonDeactivate(button)
     else
         if _G[button] then
             Entity():invokeFunction(cc.commands[button].path..".lua", "disable")
-        end
-    end
-end
-
-function cc.autoAssign()
-    if onClient() then
-        invokeServerFunction("autoAssign")
-        cc.autoAssignPicture.color = ColorRGB(0.1, 0.8, 0.1)
-        cc.autoAssignButton.caption = "Carrier - Stop Assigning"
-        cc.autoAssignButton.onPressedFunction = "StopAutoAssign"
-        for prefix,command in pairs(cc.commands) do
-            if prefix ~= "dockAll" then
-                command.activationButton.onPressedFunction = "buttonDeactivate"
-                command.activationButton.caption = command.name.." [D]"
-            end
-        end
-    else
-        local ship = Entity()
-        for prefix,command in pairs(cc.commands) do
-            if prefix ~= "dockAll" then
-                ship:addScriptOnce(command.path)
-            end
-        end
-    end
-end
-
-function cc.StopAutoAssign()
-    if onClient() then
-        invokeServerFunction("StopAutoAssign")
-        cc.autoAssignPicture.color = ColorRGB(0.3, 0.3, 0.3)
-        cc.autoAssignButton.caption = "Carrier - Auto Assign"
-        cc.autoAssignButton.onPressedFunction = "autoAssign"
-        for prefix,command in pairs(cc.commands) do
-            if prefix ~= "dockAll" then
-                command.activationButton.onPressedFunction = "buttonActivate"
-                command.activationButton.caption = command.name.." [A]"
-            end
-        end
-    else
-        for prefix,command in pairs(cc.commands) do
-            if Entity():hasScript(command.path) and prefix ~= "dockAll" then
-                Entity():invokeFunction(command.path..".lua", "disable")
-            end
         end
     end
 end
