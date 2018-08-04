@@ -25,7 +25,7 @@ end
 
 function attack.getUpdateInterval()
     if not valid(attack.target) and attack.disabled == false then return 15 end --deep sleep
-    if valid(attack.target) and attack.disabled == false then return 5 end -- light sleep
+    if valid(attack.target) and attack.disabled == false then return 2 end -- light sleep
     return 1 --awake
 end
 

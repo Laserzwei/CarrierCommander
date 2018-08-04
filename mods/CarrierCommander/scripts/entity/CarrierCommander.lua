@@ -76,7 +76,7 @@ end
 -- create all required UI elements for the client side
 function cc.initUI()
     local res = getResolution()
-    local size = vec2(335, 180 + (tablelength(cc.commands)*35))
+    local size = vec2(335, 140 + (tablelength(cc.commands)*35))
 
     local menu = ScriptUI()
     --local cc.window = menu:createcc.window(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5)) --Why is the 'local' part breaking the menu when tabs are used?
@@ -109,9 +109,9 @@ function cc.initUI()
         cc.buttons[button.index] = prefix
     end
 
-    "==========================================================================================="
-    "==================================  CONFIG TAB ============================================"
-    "==========================================================================================="
+    --"==========================================================================================="
+    --"==================================  CONFIG TAB ============================================"
+    --"==========================================================================================="
     local tab = tabbedWindow:createTab("Settings", "data/textures/icons/cog.png", "Settings")
     local pos = vec2(10,11)
 
