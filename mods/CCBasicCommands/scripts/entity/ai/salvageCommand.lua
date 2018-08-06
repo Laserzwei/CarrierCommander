@@ -178,7 +178,6 @@ end
 function salvage.secure()
     local data = {}
     data.squads= salvage.squads
-    if valid(salvage.target) then data.target = salvage.target.index.string end
     data.order = salvage.order
     data.disabled = salvage.disabled
     return data
@@ -186,7 +185,6 @@ end
 
 function salvage.restore(dataIn)
     salvage.squads = dataIn.squads
-    if dataIn.target then salvage.target =  Entity(Uuid(dataIn.target)) end
     salvage.order = dataIn.order
     salvage.disabled = dataIn.disabled or false
 end
