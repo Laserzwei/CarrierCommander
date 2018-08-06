@@ -17,6 +17,7 @@ Config.carrierScripts = {
     salvage = {name="Salvage Command", path = "mods/CCBasicCommands/scripts/entity/ai/salvageCommand"},
     mine = {name="Mine Command", path = "mods/CCBasicCommands/scripts/entity/ai/mineCommand"},
     attack = {name="Attack Command", path = "mods/CCBasicCommands/scripts/entity/ai/aggressiveCommand"},
+    repair = {name="Repair Command", path = "mods/CCBasicCommands/scripts/entity/ai/repairCommand"},
     --lootCommand = {name="Loot Command", path = "mods/CCLootPlugin/scripts/entity/ai/lootCommand"}
 }
 
