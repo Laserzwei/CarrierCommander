@@ -55,7 +55,6 @@ function repair.updateServer(timestep)
             end
         else
             if repair.target.durability >= repair.target.maxDurability then
-                print("full hp")
                 repair.target = nil
                 repair.updateServer(timestep)
             end
@@ -161,13 +160,11 @@ function repair.findRepairTarget()
                 if repairFriendlies then
                     if shipFaction == e.factionIndex or Faction(shipFaction):getRelations(e.factionIndex) > -5000 then
                         if hpSetting then
-                            print("+R+H", hp, lowestHp)
                             if hp < lowestHp then
                                 lowestHp = hp
                                 repair.target = e
                             end
                         else
-                            print("+R-H")
                             if dist < nearest and e.durability < e.maxDurability then
                                 nearest = dist
                                 repair.target = e
@@ -177,13 +174,11 @@ function repair.findRepairTarget()
                 else
                     if shipFaction == e.factionIndex or (Player(shipFaction) and Player(shipFaction).alliance and Player(shipFaction).alliance.index == e.factionIndex) then
                         if hpSetting then
-                            print("-R+H")
                             if hp < lowestHp then
                                 lowestHp = hp
                                 repair.target = e
                             end
                         else
-                            print("-R-H")
                             if dist < nearest and e.durability < e.maxDurability then
                                 nearest = dist
                                 repair.target = e
