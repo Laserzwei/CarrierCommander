@@ -144,7 +144,7 @@ function mine.findMinableAsteroid()
     local currentPos
 
     --Cwhizard's Nearest-Neighbor
-    if cc.settings["mineNN"] then
+    if _G["cc"].settings["mineNN"] then
         currentPos = valid(mine.target) and mine.target.translationf or ship.translationf
     else
         currentPos = ship.translationf
@@ -156,7 +156,7 @@ function mine.findMinableAsteroid()
     --Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
-        if ((resources ~= nil and resources > 0) or cc.settings["mineAllSetting"]) then
+        if ((resources ~= nil and resources > 0) or _G["cc"].settings["mineAllSetting"]) then
             local dist = distance2(a.translationf, currentPos)
             if dist < nearest then
                 nearest = dist
