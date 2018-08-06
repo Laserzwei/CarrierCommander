@@ -1,8 +1,8 @@
 local repairCommand = {}
 
 function repairCommand.initConfigUI(scrollframe, pos, size)
-    local label = scrollframe:createLabel(pos, "Mining config", 15)
-    label.tooltip = "Set the behaviour once the Mining-operation ends"
+    local label = scrollframe:createLabel(pos, "Repair config", 15)
+    label.tooltip = "Set the behaviour once the Rpair-operation ends"
     label.fontSize = 15
     label.font = FontType.Normal
     label.size = vec2(size.x-20, 35)

@@ -137,7 +137,7 @@ function repair.getSquadsToManage()
     end
 end
 
--- check the sector for an asteroid that can be mined.
+-- check the sector for ships that need repairs.
 -- if there is one, assign minableAsteroid
 function repair.findRepairTarget()
     local ship = Entity()
@@ -151,9 +151,10 @@ function repair.findRepairTarget()
     local entities = {Sector():getEntitiesByType(EntityType.Ship)}
     local nearest = math.huge
     local lowestHp = math.huge
+    local xsotan = Galaxy():findFaction("The Xsotan"%_T)--TODO check for other nationalities
 
     for _, e in pairs(entities) do
-        if e.durability and e.maxDurability then
+        if e.durability and e.maxDurability and e.factionIndex ~= xsotan.index then
             local hp = e.durability/e.maxDurability
             local dist = distance2(e.translationf, currentPos)
             if hp < 1 then
@@ -189,7 +190,6 @@ function repair.findRepairTarget()
             end
         end
     end
-    if valid(repair.target) then print("target", repair.target.name) end
     return valid(repair.target)
 end
 
