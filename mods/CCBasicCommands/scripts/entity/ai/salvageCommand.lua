@@ -139,16 +139,28 @@ end
 -- if there is one, assign target
 function salvage.findWreckage()
     local ship = Entity()
+    local numID = ship.index.number
     local sector = Sector()
     local currentPos
 
-    --Cwhizard's Nearest-Neighbor
-    if cc.settings["salvageNN"] then
-        currentPos = valid(salvage.target) and salvage.target.translationf or ship.translationf
+    if _G["cc"].settings["salvageSquadNearest"] then
+        local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
+        local num, pos = 0, vec3(0,0,0)
+        for _,fighter in pairs(fighters) do
+            local fAI = FighterAI(fighter)
+            if fAI.mothershipId.number == numID and salvage.squads[fAI.squad] then
+                num = num + 1
+                pos = pos + fighter.translationf
+            end
+        end
+        if num == 0 then
+            currentPos = ship.translationf
+        else
+            currentPos = pos / num
+        end
     else
         currentPos = ship.translationf
     end
-    --Cwhizard
 
     local wreckages = {sector:getEntitiesByType(EntityType.Wreckage)}
     local nearest = math.huge

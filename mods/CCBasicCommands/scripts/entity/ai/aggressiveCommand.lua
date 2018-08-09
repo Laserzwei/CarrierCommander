@@ -151,15 +151,27 @@ function attack.findEnemy()
     local shipAI = ShipAI(Entity().index)
     if shipAI:isEnemyPresent(attack.hostileThreshold) then
         local ship = Entity()
+        local numID = ship.index.number
         local currentPos
 
-        --Cwhizard's Nearest-Neighbor
-        if _G["cc"].settings["attackNN"] then
-            currentPos = valid(attack.target) and attack.target.translationf or ship.translationf
+        if _G["cc"].settings["attackSquadNearest"] then
+            local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
+            local num, pos = 0, vec3(0,0,0)
+            for _,fighter in pairs(fighters) do
+                local fAI = FighterAI(fighter)
+                if fAI.mothershipId.number == numID and attack.squads[fAI.squad] then
+                    num = num + 1
+                    pos = pos + fighter.translationf
+                end
+            end
+            if num == 0 then
+                currentPos = ship.translationf
+            else
+                currentPos = pos / num
+            end
         else
             currentPos = ship.translationf
         end
-        --Cwhizard
 
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
@@ -182,16 +194,28 @@ function attack.findEnemy()
         local xsotan = Galaxy():findFaction("The Xsotan"%_T)--TODO check for other nationalities
         if not xsotan then return false end
         local ship = Entity()
+        local numID = ship.index.number
         local currentPos
 
-        --Cwhizard's Nearest-Neighbor
-        if _G["cc"].settings["attackNN"] then
-            currentPos = valid(attack.target) and attack.target.translationf or ship.translationf
+        if _G["cc"].settings["attackSquadNearest"] then
+            local timer = Timer()
+            local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
+            local num, pos = 0, vec3(0,0,0)
+            for _,fighter in pairs(fighters) do
+                local fAI = FighterAI(fighter)
+                if fAI.mothershipId.number == numID and attack.squads[fAI.squad] then
+                    num = num + 1
+                    pos = pos + fighter.translationf
+                end
+            end
+            if num == 0 then
+                currentPos = ship.translationf
+            else
+                currentPos = pos / num
+            end
         else
             currentPos = ship.translationf
         end
-        --Cwhizard
-
         local nearest = math.huge
         local priority = 0
         local xsotanships = {Sector():getEntitiesByFaction(xsotan.index) }

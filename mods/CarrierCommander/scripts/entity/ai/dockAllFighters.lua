@@ -43,8 +43,10 @@ function dockAll.dockAllFighters()
         return
     end
     local possibleCommands = _G["cc"].Config.carrierScripts
-    for _,c in pairs(possibleCommands) do
-        --Entity():removeScript(c.path..".lua")
+    for k,c in pairs(possibleCommands) do
+        if k ~= "dockAll" then
+            Entity():removeScript(c.path..".lua")
+        end
     end
     for _,squad in pairs(dockAll.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Return, Entity().index)

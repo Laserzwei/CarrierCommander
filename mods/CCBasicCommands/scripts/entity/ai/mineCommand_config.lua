@@ -21,8 +21,8 @@ function mineCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Mine Nearest", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = "mineNN"
-    checkBox.tooltip = "Fighters will target the nearest asteroid to the last one mined (checked), \nor the one nearest to the mothership (unchecked)."
+    cc.l.uiElementToSettingMap[checkBox.index] = "mineSquadNearest"
+    checkBox.tooltip = "Fighters will target the nearest asteroid to the squad (checked), \nor the one nearest to the mothership (unchecked)."
     checkBox.captionLeft = false
     checkBox.fontSize = 14
     pos = pos + vec2(0,35)
