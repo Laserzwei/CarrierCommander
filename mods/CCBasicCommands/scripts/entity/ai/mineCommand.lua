@@ -140,16 +140,28 @@ end
 -- if there is one, assign minableAsteroid
 function mine.findMinableAsteroid()
     local ship = Entity()
+    local numID = ship.index.number
     local sector = Sector()
     local currentPos
 
-    --Cwhizard's Nearest-Neighbor
-    if _G["cc"].settings["mineNN"] then
-        currentPos = valid(mine.target) and mine.target.translationf or ship.translationf
+    if _G["cc"].settings["mineSquadNearest"] then
+        local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
+        local num, pos = 0, vec3(0,0,0)
+        for _,fighter in pairs(fighters) do
+            local fAI = FighterAI(fighter)
+            if fAI.mothershipId.number == numID and mine.squads[fAI.squad] then
+                num = num + 1
+                pos = pos + fighter.translationf
+            end
+        end
+        if num == 0 then
+            currentPos = ship.translationf
+        else
+            currentPos = pos / num
+        end
     else
         currentPos = ship.translationf
     end
-    --Cwhizard
 
     local asteroids = {sector:getEntitiesByType(EntityType.Asteroid)}
     local nearest = math.huge

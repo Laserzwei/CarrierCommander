@@ -30,7 +30,7 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     pos = pos + vec2(0,35)
 
     local checkBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Aggressive Targetting", "onCheckBoxChecked")
-    cc.l.uiElementToSettingMap[checkBox.index] = "attackNN"
+    cc.l.uiElementToSettingMap[checkBox.index] = "attackSquadNearest"
     checkBox.tooltip = "Attack ship closest to squad (checked), or closest to ship (unchecked)"
     checkBox.captionLeft = false
     checkBox.fontSize = 14
