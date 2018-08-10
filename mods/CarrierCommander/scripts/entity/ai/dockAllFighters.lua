@@ -29,6 +29,7 @@ end
 function dockAll.updateServer(timestep)
     local total, numSquads = dockAll.dockingFighters(dockAll.prefix, dockAll.squads)
     if numSquads <= 0 then
+        broadcastInvokeClientFunction("resetUI")
         broadcastInvokeClientFunction("applyStatus", -1)
         terminate()
     else
@@ -50,6 +51,21 @@ function dockAll.dockAllFighters()
     end
     for _,squad in pairs(dockAll.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Return, Entity().index)
+    end
+end
+
+function dockAll.resetUI()
+    if onServer() then return end
+    local ccList = _G["cc"].l
+    for k,command in pairs(_G["cc"].commands) do
+        if k ~= "dockAll" then
+            local pic = command.statusPicture
+            local button = command.activationButton
+            pic.tooltip = ccList.actionTostringMap[-1]
+            pic.color = ccList.actionToColorMap[-1]
+            button.caption = command.name.." [A]"
+            button.onPressedFunction = "buttonActivate"
+        end
     end
 end
 
