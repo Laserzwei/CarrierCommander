@@ -3,13 +3,15 @@ local Config = {}
 Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei"
 Config.ModName = "CarrierCommander"
 Config.version = {
-    major=1, minor=8, patch = 5,
+    major=1, minor=9, patch = 0,
     string = function()
         return  Config.version.major .. '.' ..
                 Config.version.minor .. '.' ..
                 Config.version.patch
     end
 }
+
+
 
 --new commands go here, <namespcae used by the script> = {name = <button text>, <path> = relative path from the /mods/-folder to the command, without .lua ending }
 Config.carrierScripts = {
@@ -21,6 +23,7 @@ Config.carrierScripts = {
     --lootCommand = {name="Loot Command", path = "mods/CCLootPlugin/scripts/entity/ai/lootCommand"}
 }
 
+Config.forceUnsupervisedTargeting = false   -- forces the "Unsupervised targeting"- setting for attacking fighters. Default: false
 
 Config.basePriorities = {
     ship = 20,

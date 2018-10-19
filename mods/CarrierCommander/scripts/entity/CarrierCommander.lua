@@ -148,6 +148,9 @@ function cc.requestSettingsFromServer()
 end
 
 function cc.sendSettingsToClient()
+    if _G["cc"].Config.forceUnsupervisedTargeting then
+        cc.settings["vanillaAttackPattern"] = true
+    end
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
 
