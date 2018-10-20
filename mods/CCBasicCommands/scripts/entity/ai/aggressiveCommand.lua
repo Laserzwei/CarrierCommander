@@ -161,6 +161,12 @@ function attack.findEnemy()
             if not valid(attack.target) then
                 local target = shipAI:getNearestEnemy(attack.hostileThreshold)
                 if valid(target) then
+                    --[[if attack.checkEnemy(target) then -- checks if shipAI selected valid station or civil target
+
+                    else -- well shipAI doesn't supply an alternative enemy, so nothing useful that can be done
+
+                    end
+                    ]]--
                     attack.target = target
                 end
             else
@@ -168,7 +174,6 @@ function attack.findEnemy()
             end
             return valid(attack.target)
         end
-
         if _G["cc"].settings["attackSquadNearest"] then  -- find center of all controlled fighters and use it as reference point
             local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
             local num, pos = 0, vec3(0,0,0)
@@ -205,7 +210,6 @@ function attack.findEnemy()
             end
         end
     end
-
     return valid(attack.target)
 end
 
@@ -239,10 +243,11 @@ function attack.checkEnemy(e)
     elseif attack.isXsotan(e.factionIndex) then -- xsotan ship
         b = true
     end
+    --check for civil ships
     if (e:getValue("civil") ~= nil or e:hasScript("civilship.lua") == true) and not _G["cc"].settings[attack.prefix.."spareCivilsSetting"] then
         b = false
     end
-
+    --check for stations
     if e.isStation and not _G["cc"].settings[attack.prefix.."attackStations"] then
         b = false
     end
