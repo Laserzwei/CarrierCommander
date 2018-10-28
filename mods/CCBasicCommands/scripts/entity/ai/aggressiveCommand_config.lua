@@ -30,6 +30,13 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     stationCheckBox.fontSize = 14
     pos = pos + vec2(0,35)
 
+    local slider = scrollframe:createSlider(Rect(pos+vec2(0,5),pos+vec2(size.x-75, 25)), 1, 50, 49, "", "onSliderValueChanged")
+    cc.l.uiElementToSettingMap[slider.index] = "attack_reevaluationDistance"
+    slider.caption = "re-targeting threshold distance"
+    slider.description = ""
+    slider.unit = "km"
+    pos = pos + vec2(0,35)
+
     local targetingCheckBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Aggressive Targetting", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[targetingCheckBox.index] = "attackSquadNearest"
     targetingCheckBox.tooltip = "Attack ship closest to squad (checked), or closest to ship (unchecked)"

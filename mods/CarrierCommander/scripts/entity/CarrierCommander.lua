@@ -180,7 +180,7 @@ function cc.client_applySettings()
             CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[key])
         end
         if valid(Slider(uiElemIndex)) then
-             Slider(uiElemIndex):setValueNoCallback(cc.settings[key])
+            Slider(uiElemIndex):setValueNoCallback(cc.settings[key])
         end
     end
 end

@@ -197,7 +197,7 @@ function attack.findEnemy()
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
         local hasTarget = valid(attack.target)
-        local distThreshold = 15 * 1000
+        local distThreshold = (_G["cc"].settings["attack_reevaluationDistance"] or 15) * 1000
         local priority = hasTarget and attack.getPriority(attack.target) or 0
         local proposedTarget = attack.target
 
