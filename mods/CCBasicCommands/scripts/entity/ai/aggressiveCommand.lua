@@ -196,33 +196,51 @@ function attack.findEnemy()
 
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
-        local priority = valid(attack.target) and attack.getPriority(attack.target) or 0
+        local hasTarget = valid(attack.target)
+        local distThreshold = 15 * 100 -- 15km in Avorion length-units
+        local distToCurrent = hasTarget and distance2(attack.target.translationf, currentPos) + distThreshold <
+        local priority = hasTarget and attack.getPriority(attack.target) or 0
+        local proposedTarget = attack.target
+
 
         for _, e in pairs(entities) do
-            local p = attack.getPriority(e)
             local dist = distance2(e.translationf, currentPos)
-            if priority < p and dist < nearest then -- possible closer and higher priority target found
+            local newPrio = attack.getPriority(e)
+            -- higher prio -> new target
+            -- same prio and no current Target -> select closest new target
+            -- same prio and has a valid Target and new Target is 15km closer than current target -> ignore current target and select closest new target
+            if newPrio > priority or
+              (newPrio >= priority and dist < nearest and (not hasTarget or
+              (hasTarget and dist + distThreshold < distance2(attack.target.translationf, currentPos)))) then
                 if attack.checkEnemy(e) then
                     nearest = dist
-                    attack.target = e
-                    priority = p
+                    proposedTarget = e
+                    priority = newPrio
                 end
             end
         end
+        if valid(proposedTarget) then
+            attack.target = proposedTarget
+            return true
+        else
+            return false
+        end
     end
-    return valid(attack.target)
 end
 
 function attack.getPriority(entity)
     if not valid(entity) then return -1 end
-    local priority = 0
+    local priority = -1
 
     -- vanilla priorities
-    if entity.isShip then priority = _G["cc"].Config.basePriorities.ship
+    if entity.isShip then
+        priority = _G["cc"].Config.basePriorities.ship
     elseif entity.isStation then priority = _G["cc"].Config.basePriorities.station
-    elseif entity.isFighter then priority = _G["cc"].Config.basePriorities.fighter
-    elseif entity:hasScript("story/wormholeguardian.lua") then priority = _G["cc"].Config.basePriorities.guardian
-    else priority = -1 end -- do not attack other entities
+    elseif entity.isFighter then priority = _G["cc"].Config.basePriorities.fighter end
+
+    if entity:hasScript("story/wormholeguardian.lua") then
+        priority = _G["cc"].Config.basePriorities.guardian
+    end
 
     --custom priorities
     for k,p in pairs(_G["cc"].Config.additionalPriorities) do
