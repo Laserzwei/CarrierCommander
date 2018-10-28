@@ -197,8 +197,7 @@ function attack.findEnemy()
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
         local hasTarget = valid(attack.target)
-        local distThreshold = 15 * 100 -- 15km in Avorion length-units
-        local distToCurrent = hasTarget and distance2(attack.target.translationf, currentPos) + distThreshold <
+        local distThreshold = 15 * 1000
         local priority = hasTarget and attack.getPriority(attack.target) or 0
         local proposedTarget = attack.target
 
@@ -209,13 +208,14 @@ function attack.findEnemy()
             -- higher prio -> new target
             -- same prio and no current Target -> select closest new target
             -- same prio and has a valid Target and new Target is 15km closer than current target -> ignore current target and select closest new target
-            if newPrio > priority or
-              (newPrio >= priority and dist < nearest and (not hasTarget or
-              (hasTarget and dist + distThreshold < distance2(attack.target.translationf, currentPos)))) then
-                if attack.checkEnemy(e) then
-                    nearest = dist
-                    proposedTarget = e
-                    priority = newPrio
+            if newPrio > priority or (newPrio >= priority and dist < nearest) then
+               if (not hasTarget or
+                  (hasTarget and (dist + distThreshold) < distance2(attack.target.translationf, currentPos))) then
+                    if attack.checkEnemy(e) then
+                        nearest = dist
+                        proposedTarget = e
+                        priority = newPrio
+                    end
                 end
             end
         end
