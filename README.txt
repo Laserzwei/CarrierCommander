@@ -1,28 +1,30 @@
 Install instructions
-Install Shipscriptloader from: https://www.avorion.net/forum/index.php/topic,3918.0.html .
-Go to https://www.avorion.net/forum/index.php/topic,4268.0.html , log in and download the appropriate Version of CC.
+Place the contents of the "mods" folder into your /steam/.../Avorion/mods/ folder.
 
-Place the contents of the "mods" folder into your   /steam/.../Avorion/mods/   folder.
-
-Open file   Avorion/mods/ShipScriptLoader/config/ShipScriptLoader.lua
-Before the last line containing  "return Config"  add this:
-
-Config.Add("mods/CarrierCommander/scripts/entity/CarrierCommander.lua")
+Place the contents of /data/ in /Avorion/data/.
+This will overwrite /entity/init.lua
 
 
-If the icon does not show up:
-Replace the Shipscriptloader-code in   data/scripts/server/server.lua   with:
+Go to /Avorion/data/scripts/entity/shipfounder.lua and open it in your favourite text editor(e.g. Notepad++).
+In line 140 (close to the end) replace the line
+ship:addScript("entity/claimalliance.lua")
+with
+ship:addScriptOnce("entity/claimalliance.lua")
 
-local s, b = pcall(require, "mods/ShipScriptLoader/scripts/server/server")
-if s then
-    if b.onPlayerLogIn then
-        local a = onPlayerLogIn
-        onPlayerLogIn = function(c) a(c); b.onPlayerLogIn(c); end
+Or use the claimalliance.lua provided with previous releases (not included in this one though).
+
+
+
+In case of mod conflicts:
+Instead of overwriting init.lua, you can instead add
+
+if entity.isShip then
+    if entity.allianceOwned then
+        entity:addScriptOnce("mods/CarrierCommander/scripts/entity/CarrierCommander.lua")
     end
-else
-    print("failed to load ShipScriptLoader", b)
+    if entity.playerOwned then
+        entity:addScriptOnce("mods/CarrierCommander/scripts/entity/CarrierCommander.lua")
+    end
 end
 
-and check your Logs in %appdata%/avorion/... .
-
-additionally place the contents of /data/ in /Avorion/data/
+at the end of the file.
