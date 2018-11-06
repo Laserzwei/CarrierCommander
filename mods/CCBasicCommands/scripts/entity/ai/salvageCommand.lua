@@ -119,7 +119,7 @@ end
 
 function salvage.getSquadsToManage()
     local hangar = Hangar(Entity().index)
-    if not hangar or hangar.space <= 0 then print("noHangar") return end
+    if not hangar or hangar.space <= 0 then return end
 
     local squads = {}
     for _,squad in pairs({hangar:getSquads()}) do

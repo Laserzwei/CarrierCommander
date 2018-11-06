@@ -7,10 +7,11 @@ if entity:hasComponent(ComponentType.DockingPositions) then
 end
 
 if entity.allianceOwned then
+    entity:removeScript("entity/claimalliance.lua")
     entity:addScriptOnce("entity/claimalliance.lua")
 end
 
-if entity.isShip then
+if entity.isShip or entity.isStation then
     if entity.allianceOwned then
         entity:addScriptOnce("mods/CarrierCommander/scripts/entity/CarrierCommander.lua")
     end
