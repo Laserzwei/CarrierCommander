@@ -44,7 +44,7 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     targetingCheckBox.fontSize = 14
     pos = pos + vec2(0,35)
 
-    local vanillaCheckBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Unsupervised targeting", "onCheckBoxChecked")
+    local vanillaCheckBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Unsupervised Targeting", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[vanillaCheckBox.index] = "vanillaAttackPattern"
     vanillaCheckBox.tooltip = "(checked) This will use pure vanilla targeting: Attacking the closest target and only changing it after it died."
     .."\n - No priority for Fighters/bosses/stations etc."

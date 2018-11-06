@@ -31,7 +31,7 @@ Config.basePriorities = {   -- higher priority targets will be destroyed first
     guardian = 15,
     station = 5,
 }
-Config.additionalPriorities = { --Only for modded additions. Modders: When creating a new Boss then use Entity():setValue("customBoss", someNumber), to mark it. someNumber > 0. The Attack script will then activley search for those marked enemies and assign the priority set in the config
+Config.additionalPriorities = { --Only for modded additions. Modders: When creating a new Boss then use Entity():setValue("customBoss", anyDataNotNil), to mark it. The Attack script will then activley search for those marked enemies and assign the priority set in the config
 
     --customBoss = 25
 }

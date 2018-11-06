@@ -207,7 +207,7 @@ function attack.findEnemy()
             local newPrio = attack.getPriority(e)
             -- higher prio -> new target
             -- same prio and no current Target -> select closest new target
-            -- same prio and has a valid Target and new Target is 15km closer than current target -> ignore current target and select closest new target
+            -- same prio and has a valid Target and new Target is 15km (default) closer than current target -> ignore current target and select closest new target
             if newPrio > priority or (newPrio >= priority and dist < nearest) then
                if (not hasTarget or
                   (hasTarget and (dist + distThreshold) < distance2(attack.target.translationf, currentPos))) then
