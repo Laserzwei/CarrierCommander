@@ -148,6 +148,9 @@ function cc.requestSettingsFromServer()
 end
 
 function cc.sendSettingsToClient()
+    if _G["cc"].Config.forceUnsupervisedTargeting then
+        cc.settings["vanillaAttackPattern"] = true
+    end
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
 
@@ -177,7 +180,7 @@ function cc.client_applySettings()
             CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[key])
         end
         if valid(Slider(uiElemIndex)) then
-             Slider(uiElemIndex):setValueNoCallback(cc.settings[key])
+            Slider(uiElemIndex):setValueNoCallback(cc.settings[key])
         end
     end
 end
