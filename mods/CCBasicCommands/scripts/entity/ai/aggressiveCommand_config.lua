@@ -47,8 +47,9 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     local vanillaCheckBox = scrollframe:createCheckBox(Rect(pos+vec2(0,5),pos+vec2(size.x-35, 25)), "Unsupervised targeting", "onCheckBoxChecked")
     cc.l.uiElementToSettingMap[vanillaCheckBox.index] = "vanillaAttackPattern"
     vanillaCheckBox.tooltip = "(checked) This will use pure vanilla targeting: Attacking the closest target and only changing it after it died."
-    .." \n - No priority for Fighters/bosses/stations etc."
+    .."\n - No priority for Fighters/bosses/stations etc."
     .."\n - No chasing the target closest to the fighters."
+    .."\n - No preventions for civils."
     .."\n + Highly performant (recommended, when using endgame fighters)"
     vanillaCheckBox.captionLeft = false
     vanillaCheckBox.fontSize = 14
@@ -66,6 +67,7 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
         vanillaCheckBox.tooltip = "(checked) This will use pure vanilla targeting: Attacking the closest target and only changing it after it died."
         .."\n - No priority for Fighters/bosses/stations etc."
         .."\n - No chasing the target closest to the fighters."
+        .."\n - No preventions for civils."
         .."\n + Highly performant (recommended, when using endgame fighters)"
         .."\n Unsupervised targeting is forced by the server-config!"
     end
