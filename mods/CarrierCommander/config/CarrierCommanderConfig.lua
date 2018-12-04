@@ -3,7 +3,7 @@ local Config = {}
 Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei"
 Config.ModName = "CarrierCommander"
 Config.version = {
-    major=1, minor=9, patch = 2,
+    major=1, minor=10, patch = 0,
     string = function()
         return  Config.version.major .. '.' ..
                 Config.version.minor .. '.' ..

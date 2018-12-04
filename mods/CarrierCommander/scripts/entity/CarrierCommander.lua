@@ -2,6 +2,7 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 
 require ("stringutility")
 require ("utility")
+require ("callable")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace cc
@@ -153,6 +154,7 @@ function cc.sendSettingsToClient()
     end
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
+callable(cc, "sendSettingsToClient")
 
 function cc.receiveSettings(pSettings)
     if onClient() then
@@ -190,6 +192,7 @@ function cc.changeServerSettings(key, value)
         cc.settings[key] = value
     end
 end
+callable(cc, "changeServerSettings")
 
 -- checks for every requested Squad, if it has been claimed by another script
 -- and returns all squads claimed by the requesting script
@@ -234,6 +237,7 @@ function cc.buttonActivate(button)
         Entity():addScriptOnce(cc.commands[button].path)
     end
 end
+callable(cc, "buttonActivate")
 
 function cc.buttonDeactivate(button)
     if onClient() then
@@ -251,6 +255,7 @@ function cc.buttonDeactivate(button)
         end
     end
 end
+callable(cc, "buttonDeactivate")
 
 --SETTINGS
 function cc.onCheckBoxChecked(checkbox)

@@ -2,6 +2,7 @@ package.path = package.path .. ";data/scripts/lib/?.lua"
 require ("defaultscripts")
 require ("stringutility")
 require ("utility")
+require ("callable")
 
 local nameTextBox = nil
 
@@ -97,7 +98,7 @@ local function foundShip(faction, player, name)
 
     -- add base scripts
     AddDefaultShipScripts(ship)
-    ship:addScript("insurance.lua")
+    ship:addScriptOnce("insurance.lua")
 
     player.craft = ship
 
@@ -144,3 +145,4 @@ function found(name, forAlliance)
     end
 
 end
+callable(nil, "found")
