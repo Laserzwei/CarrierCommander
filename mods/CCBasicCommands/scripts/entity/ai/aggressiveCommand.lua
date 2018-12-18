@@ -266,7 +266,7 @@ function attack.checkEnemy(e)
         b = false
     end
     --check for stations
-    if e.isStation and not _G["cc"].settings[attack.prefix.."attackStations"] then
+    if e.isStation and not _G["cc"].settings["attackStations"] then
         b = false
     end
 
