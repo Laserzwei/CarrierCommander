@@ -1,7 +1,7 @@
 local Config = {}
 
 Config.Author = "Nexus, Dirtyredz, Hammelpilaw, Maxx4u, Laserzwei"
-Config.ModName = "CarrierCommander"
+Config.ModName = "Carrier Commander"
 Config.version = {
     major=1, minor=10, patch = 1,
     string = function()

@@ -80,13 +80,11 @@ function cc.initUI()
     local size = vec2(335, 140 + (tablelength(cc.commands)*35))
 
     local menu = ScriptUI()
-    --local cc.window = menu:createcc.window(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5)) --Why is the 'local' part breaking the menu when tabs are used?
     cc.window = menu:createWindow(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5))
 
     cc.window.caption = "Fighter Orders"
     cc.window.showCloseButton = 1
     cc.window.moveable = 1
-    --cc.window.icon = "data/textures/icons/fighter.png" --Sad, does not work =( I want to change it from the puzzle piece icon to something else
 
     menu:registerWindow(cc.window, "Carrier Orders")
     local tabbedWindow = cc.window:createTabbedWindow(Rect(vec2(10, 10), size - 10))
