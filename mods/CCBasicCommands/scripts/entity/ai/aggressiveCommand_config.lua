@@ -30,9 +30,9 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
     stationCheckBox.fontSize = 14
     pos = pos + vec2(0,35)
 
-    local slider = scrollframe:createSlider(Rect(pos+vec2(0,5),pos+vec2(size.x-75, 25)), 1, 50, 49, "", "onSliderValueChanged")
+    local slider = scrollframe:createSlider(Rect(pos+vec2(0,-5),pos+vec2(size.x-75, 40)), 1, 50, 49, "", "onSliderValueChanged")
     cc.l.uiElementToSettingMap[slider.index] = "attack_reevaluationDistance"
-    slider.caption = "re-targeting threshold distance"
+    slider.caption = "Re-targeting threshold distance"
     slider.description = ""
     slider.unit = "km"
     pos = pos + vec2(0,35)

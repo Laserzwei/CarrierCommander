@@ -11,6 +11,10 @@ if entity.allianceOwned then
     entity:addScriptOnce("entity/claimalliance.lua")
 end
 
+if entity:hasComponent(ComponentType.ShipAI) then
+    entity:addScriptOnce("data/scripts/entity/orderchain.lua")
+end
+
 if entity.isShip or entity.isStation then
     if entity.allianceOwned then
         entity:addScriptOnce("mods/CarrierCommander/scripts/entity/CarrierCommander.lua")
