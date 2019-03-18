@@ -114,8 +114,14 @@ end
 
 function repair.repair()
     local fighterController = FighterController(Entity().index)
+    local order
+    if repair.target.index.number == Entity().index.number then
+        order = FighterOrders.Defend
+    else
+        order = FighterOrders.Attack
+    end
     for _,squad in pairs(repair.squads) do
-        fighterController:setSquadOrders(squad, FighterOrders.Defend, repair.target.index)
+        fighterController:setSquadOrders(squad, order, repair.target.index)
     end
 end
 
