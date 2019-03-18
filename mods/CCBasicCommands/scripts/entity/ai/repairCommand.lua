@@ -115,7 +115,7 @@ end
 function repair.repair()
     local fighterController = FighterController(Entity().index)
     for _,squad in pairs(repair.squads) do
-        fighterController:setSquadOrders(squad, FighterOrders.Attack, repair.target.index)
+        fighterController:setSquadOrders(squad, FighterOrders.Defend, repair.target.index)
     end
 end
 
