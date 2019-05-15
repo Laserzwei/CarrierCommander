@@ -1,21 +1,6 @@
 
-msgid "Carrier Orders
+msgid "Carrier Orders"
 msgstr "Träger Befehle"
 
 msgid "(unnamed)"
 msgstr "(unbenannt)"
-
-msgid "Select Design"
-msgstr "Design wählen"
-
-msgid "Select your Design"
-msgstr "Wähle dein Design"
-
-msgid "Deselect"
-msgstr "Abwählen"
-
-msgid "Time to construct:"
-msgstr "Konstruktionszeit:"
-
-msgid "You may only select ship blueprints."
-msgstr "Du kannst nur Shiffspläne nutzen."

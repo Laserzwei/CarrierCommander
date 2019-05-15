@@ -12,7 +12,7 @@ cc = {}
 --data
 cc.Config = include("data/config/CarrierCommanderConfig") -- server settings
 cc.l = include("data/scripts/lib/lists") -- contains selectableOrderNames, uiElementToSettingMap, actionTostringMap, tooltipadditions
-cc.commands = include("data/scripts/entity/ai/commandHook") -- All commands register here
+cc.commands = include("data/scripts/entity/commandHook") -- All commands register here
 
 cc.settings = {} --playersettings
 cc.claimedSquads = {}   -- <SquadIndex> = "scriptnamespace"
@@ -93,7 +93,6 @@ function cc.initUI()
     local tab = tabbedWindow:createTab("Entity", "data/textures/icons/fighter.png", "Commands"%_t)
 
     numButtons = 0
-
     for k in pairs(cc.commands) do table.insert(sortedPrefixes, k) end
     table.sort(sortedPrefixes)
     for _,prefix in ipairs(sortedPrefixes) do
