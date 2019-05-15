@@ -47,7 +47,6 @@ function dockAll.dockAllFighters()
     local possibleCommands = _G["cc"].commands
     for k,c in pairs(possibleCommands) do
         if k ~= "dockAll" then
-            print("removing", c.path..".lua")
             Entity():removeScript(c.path..".lua")
         end
     end

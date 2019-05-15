@@ -9,21 +9,10 @@ include ("faction")
 -- namespace cc
 cc = {}
 
-function cc.createCallbackList(commands)
-    local list = {}
-    for namespace, command in pairs(commands) do
-        for _,callback in pairs(command.callbacks or {}) do
-            list[callback] = list[callback] and table.insert(list[callback], namespace) or {namespace}
-        end
-    end
-    return list
-end
-
 --data
 cc.Config = include("data/config/CarrierCommanderConfig") -- server settings
 cc.l = include("data/scripts/lib/lists") -- contains selectableOrderNames, uiElementToSettingMap, actionTostringMap, tooltipadditions
-cc.commands = include("data/scripts/entity/commandHook") -- All commands register here
-cc.callbackList = cc.createCallbackList(cc.commands) -- [callback] = {[num] = namespace}
+cc.commands = include("data/scripts/entity/ai/commandHook") -- All commands register here
 
 cc.settings = {} --playersettings
 cc.claimedSquads = {}   -- <SquadIndex> = "scriptnamespace"
@@ -46,139 +35,10 @@ cc.uiInitialized = false
 
 local waitTime, waited = 5, false     --super angry I have to use this
 function cc.initialize()
-    deferredCallback(5, "postInitialize")
     if onServer() then
         --don't run carrier Commands on a drone!
         if Entity().isDrone then terminate()  return end
     end
-end
-
-function cc.postInitialize()
-    cc.registerCallbackss()
-end
-
-function cc.registerCallbackss()
-
-    cc.registerSectorCallbacks(Sector():getCoordinates())
-    --squads
-    local entity = Entity()
-    entity:registerCallback("onSquadAdded","onSquadAdded")
-    entity:registerCallback("onSquadRemove","onSquadRemove")
-    entity:registerCallback("onSquadOrdersChanged","onSquadOrdersChanged")
-
-    entity:registerCallback("onFighterStarted","onFighterStarted")
-    entity:registerCallback("onFighterLanded","onFighterLanded")
-    entity:registerCallback("onFighterAdded","onFighterAdded")
-    entity:registerCallback("onFighterRemove","onFighterRemove")
-    -- sector change
-    entity:registerCallback("onJump", "onJump")
-    entity:registerCallback("onSectorEntered", "onSectorEntered")
-end
-
-function cc.registerSectorCallbacks(x, y)
-    local sector = Sector()
-
-    sector:registerCallback("onEntityCreate", "onEntityCreate")
-    sector:registerCallback("onEntityEntered", "onEntityEntered")
-end
-
-function cc.unregisterSectorCallbacks(x,y)
-    local sector = Sector()
-
-    --sector:unregisterCallback("onEntityCreate", "onEntityCreate")
-    --sector:unregisterCallback("onEntityEntered", "onEntityEntered")
-end
-
-function cc.eventCall(event, ...)
-    if not cc.callbackList[event] then return end   -- a.k.a. : No command registered that callback
-    local ship = Entity()
-    for i, namespace in ipairs (cc.callbackList[event]) do
-        if _G[namespace] then   -- namespace is only available when the command is active
-            --if _G[namespace][event] then    -- It's simply assumed that the modauthors, who added the event-callbackhook also implmented it
-                _G[namespace][event](...)
-            --end
-        end
-    end
-end
-
-function cc.onEntityCreate(entityId)
-    local entity = Entity(entityId)
-    if entity.isFlyable then    -- Stations, Drone, Ship, Fighter
-        --print(Entity().name, "Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
-        cc.eventCall("onFlyableCreated", entity)
-    elseif entity.isAsteroid then
-        --print(Entity().name, "Asteroid created", entity.typename)
-        cc.eventCall("onAsteroidCreated", entity)
-    elseif entity.isWreckage then
-        --print(Entity().name, "Wreckage created", entity.typename)
-        cc.eventCall("onWreckageCreated", entity)
-    elseif entity.isLoot then
-        --print(Entity().name, "Loot created", entity.typename)
-        cc.eventCall("onLootCreated", entity)
-    else
-        --print(Entity().name, "* created", entity.typename, entity.isTurret, entity.isAnomaly, entity.isUnknown, entity.isOther, entity.isWormHole)
-        --cc.eventCall("otherCreated", entity)
-    end
-end
-
-function cc.onEntityEntered(shipIndex)
-    --print(Entity().name, "Entity Entered: ", Entity(shipIndex).name)
-    cc.eventCall("onEntityEntered", shipIndex)
-end
-
-function cc.onSquadAdded(entityId, squadIndex)-- gets also called on squadRename
-    --print(Entity().name, "Squad Changed, added or renamed", squadIndex)
-    cc.eventCall("onSquadAdded", squadIndex)
-end
-
-function cc.onSquadRemove(entityId, squadIndex)
-    --print(Entity().name, "Squad Changed, remove", squadIndex)
-    cc.eventCall("onSquadRemove", squadIndex)
-end
-
-function cc.onSquadOrdersChanged(entityId, squadIndex, orders, targetId)
-    --print(Entity().name, "Squad Order changed", squadIndex, orders, targetId, valid(Entity(targetId)) and Entity(targetId).name or "-E")
-    cc.eventCall("onSquadOrdersChanged", squadIndex, orders, targetId)
-end
-
-function cc.onFighterStarted(entityId, squadIndex, fighterId)
-    --local fAI = FighterAI(fighterId)
-    --print(Entity().name, Entity(entityId).name, "[AI] fighter started squad", squadIndex, cc.l.actionTostringMap[fAI.orders])
-    cc.eventCall("onFighterStarted", squadIndex, fighterId)
-end
-
-function cc.onFighterLanded(entityId, squadIndex, fighterId)
-    --print(Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
-    cc.eventCall("onFighterLanded", squadIndex, fighterId)
-end
-
-function cc.onFighterAdded(entityId, squadIndex, fighterIndex, landed)
-    --print(Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed)
-    cc.eventCall("onFighterAdded", squadIndex, fighterIndex, landed)
-end
-
-function cc.onFighterRemove(entityId, squadIndex, fighterIndex, started) --entityTemplate is not accessable, even though it's supposed to be called BEFORE the fighter gets removed
-    --print(Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
-    cc.eventCall("onFighterRemove", squadIndex, fighterIndex, started)
-end
-
---gets called before sector change
-function cc.onJump(shipIndex, x, y)
-    --print(Entity().name, "on Jump", x, y)
-    cc.unregisterSectorCallbacks(Sector():getCoordinates())
-    cc.eventCall("onJump", shipIndex, x, y)
-end
---gets called after sector change
-function cc.onSectorEntered(shipIndex, x, y)
-    --print(Entity().name, "on Sector entered", x, y)
-    cc.registerSectorCallbacks(Sector():getCoordinates())
-    --deferredCallback(5, "eventCall", "onSectorEntered", shipIndex, x, y)
-    cc.eventCall("onSectorEntered", shipIndex, x, y)
-end
-
-function cc.onSettingChanged(setting, before, now)
-    --print(Entity().name, setting, before, now)
-    cc.eventCall("onSettingChanged", setting, before, now)
 end
 
 function cc.getIcon(seed, rarity)
@@ -314,23 +174,22 @@ function cc.updateButtons()
 end
 
 function cc.client_applySettings()
-    for uiElemIndex, setting in pairs(cc.l.uiElementToSettingMap) do
+    for uiElemIndex, key in pairs(cc.l.uiElementToSettingMap) do
         if valid(ValueComboBox(uiElemIndex)) then
-            ValueComboBox(uiElemIndex):setSelectedValueNoCallback(cc.settings[setting])
+            ValueComboBox(uiElemIndex):setSelectedValueNoCallback(cc.settings[key])
         end
         if valid(CheckBox(uiElemIndex)) then
-            CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[setting])
+            CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[key])
         end
         if valid(Slider(uiElemIndex)) then
-            Slider(uiElemIndex):setValueNoCallback(cc.settings[setting])
+            Slider(uiElemIndex):setValueNoCallback(cc.settings[key])
         end
     end
 end
 --change single setting value
-function cc.changeServerSettings(setting, value)
+function cc.changeServerSettings(key, value)
     if onServer() then
-        cc.settings[setting] = value
-        cc.onSettingChanged(setting, cc.settings[setting], value)
+        cc.settings[key] = value
     end
 end
 callable(cc, "changeServerSettings")

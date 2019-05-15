@@ -13,37 +13,74 @@ docker.integrate(mine)
 mine.prefix = "mine"
 mine.squads = {}                 --[squadIndex] = squadIndex           --squads to manage
 mine.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
-mine.settingsCommands = {mineStopOrder = "setSquadsIdle", mineAllSetting = "removeThis", mineSquadNearest = "removeThis"}
-mine.state = -1
+mine.disabled = false
 
-function mine.removeThis()
-    print(Entity().name, "Remove This!")
-end
+local checkAfterInit = true
 
 function mine.initialize()
-    deferredCallback(5, "postInitialize")
-end
-
-function mine.postInitialize()
     if onServer() then
-        mine.selectNewAndMine()
+
     else
         mine.applyStatus("idle")
     end
 end
 
-function mine.updateServer(timestep)
+function mine.getUpdateInterval()
+    if not valid(mine.target) and mine.disabled == false then return 15 end
+    if valid(mine.target) and mine.disabled == false then return 5 end
+    return 1
+end
 
+function mine.updateServer(timestep)
+    if mine.disabled == false then
+        if not valid(mine.target) then
+            if mine.getSquadsToManage() then
+                if mine.findMinableAsteroid() then
+                    broadcastInvokeClientFunction("applyStatus", 5)
+                    mine.mine()
+                else
+                    mine.setSquadsIdle()
+                    if mine.order == FighterOrders.Return then
+
+                        local total, numSquads = mine.dockingFighters(mine.prefix, mine.squads)
+                        if numSquads <= 0 then
+                            broadcastInvokeClientFunction("applyStatus", "idle")
+                        else
+                            broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+                        end
+                    else
+                        broadcastInvokeClientFunction("applyStatus", "idle")
+                    end
+                end
+            else
+                broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
+            end
+        else
+
+        end
+    else
+        mine.setSquadsIdle()
+        if mine.order == FighterOrders.Return then
+            mine.squads = _G["cc"].claimSquads(mine.prefix, mine.squads)
+
+            local total, numSquads = mine.dockingFighters(mine.prefix, mine.squads)
+
+            if numSquads <= 0 then
+                broadcastInvokeClientFunction("applyStatus", -1)
+                terminate()
+            else
+                broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
+            end
+        else
+            broadcastInvokeClientFunction("applyStatus", -1)
+            terminate()
+        end
+    end
 end
 
 function mine.applyStatus(status, ...)
-    if onServer() then
-        mine.state = status
-        broadcastInvokeClientFunction("applyStatus", status, ...)
-    else
-        mine.state = status
-        --print("apply", string.format(_G["cc"].l.actionTostringMap[status], unpack(args or {})))
-        if _G["cc"].uiInitialized then
+    if onClient() then
+        if  _G["cc"].uiInitialized then
             local args = {...}
 
             local pic = _G["cc"].commands[mine.prefix].statusPicture
@@ -51,11 +88,14 @@ function mine.applyStatus(status, ...)
             pic.color = _G["cc"].l.actionToColorMap[status]
             pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
         end
+    else
+        print("why?")
     end
 end
 
 -- set final orders for all controlled squads
 function mine.disable()
+    mine.disabled = true
     mine.target = nil
     mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
@@ -63,27 +103,11 @@ function mine.disable()
     for _,squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, mine.order, Entity().index)
     end
-    print("Disable")
+
     if mine.order ~= FighterOrders.Return then
         _G["cc"].unclaimSquads(mine.prefix, mine.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
-        print(Entity().name, "Mine Terminate")
         terminate()
-    end
-end
-
-function mine.selectNewAndMine()
-    if mine.getSquadsToManage() then
-        if mine.findMineableAsteroid() then
-            mine.mine()
-            print(Entity().name, "Mining")
-        else
-            mine.setSquadsIdle()
-            print(Entity().name, "no asteroids found")
-            broadcastInvokeClientFunction("applyStatus", "noAsteroid")
-        end
-    else
-        broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
     end
 end
 
@@ -92,7 +116,6 @@ function mine.mine()
     for _,squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Attack, mine.target.index)
     end
-    broadcastInvokeClientFunction("applyStatus", "Mining")
 end
 
 function mine.getSquadsToManage()
@@ -105,9 +128,7 @@ function mine.getSquadsToManage()
             squads[squad] = squad
         end
     end
-    print("Size A", tablelength(mine.squads), tablelength(squads))
     mine.squads = _G["cc"].claimSquads(mine.prefix, squads)
-    print("Size B", tablelength(mine.squads))
     if next(mine.squads) then
         return true
     else
@@ -117,7 +138,7 @@ end
 
 -- check the sector for an asteroid that can be mined.
 -- if there is one, assign minableAsteroid
-function mine.findMineableAsteroid()
+function mine.findMinableAsteroid()
     local ship = Entity()
     local numID = ship.index.number
     local sector = Sector()
@@ -142,10 +163,14 @@ function mine.findMineableAsteroid()
         currentPos = ship.translationf
     end
 
+
+
+
+
     local hasMiningSystem = ship:hasScript("systems/miningsystem.lua")
     local asteroids = {sector:getEntitiesByType(EntityType.Asteroid)}
     local nearest = math.huge
-
+    --Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
         if ((a.isObviouslyMineable or hasMiningSystem) and
@@ -159,72 +184,14 @@ function mine.findMineableAsteroid()
         end
     end
 
-    if valid(mine.target) then
-        mine.target:registerCallback("onDestroyed", "onTargetDestroyed")
-        return true
-    else
-        mine.target = nil
-        return false
-    end
+    return valid(mine.target)
 end
 
 function mine.setSquadsIdle()
     local fighterController = FighterController(Entity().index)
     mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
-    print("Size C", tablelength(mine.squads))
     for _,squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, mine.order, Entity().index)
-    end
-end
-
-function mine.onTargetDestroyed(index, lastDamageInflictor)
-    print(Entity().name, "Target destroyed", index.string, valid(mine.target))
-    mine.selectNewAndMine()
-end
-
--- only change Asteroid, when no other is available
-function mine.onAsteroidCreated(entity)
-    if not valid(mine.target) then
-        mine.selectNewAndMine()
-    end
-end
-
-function mine.onSquadOrdersChanged(squadIndex, orders, targetId)
-    if mine.squads[squadIndex] then
-        print(Entity().name, "Squad Order", squadIndex, orders, targetId.string)
-    end
-end
-
-function mine.onFighterAdded(squadIndex, fighterIndex, landed)
-    print(Entity().name, "Fighter added", squadIndex, fighterIndex, landed)
-    if landed then
-        local missing, numsquads = mine.dockingFighters(mine.prefix, mine.squads)
-        if mine.state ~= "landing" then
-
-        end
-        print(string.format("[E]Waiting for %i Fighter(s) in %i Squad(s) to dock at %s", missing, numsquads, Entity().name))
-    end
-end
-
-function mine.onFighterRemove(squadIndex, fighterIndex, started)
-    print(Entity().name, "Fighter remove", squadIndex, fighterIndex, started)
-end
-
-function mine.onJump(shipIndex, x, y)
-    if valid(mine.target) then
-        mine.target:unregisterCallback("onDestroyed", "onTargetDestroyed")
-    end
-end
-
-function mine.onSectorEntered(shipIndex, x, y)
-    print(Entity().name, "Entered Sector: ", x, y)
-    mine.selectNewAndMine()
-end
-
-function mine.onSettingChanged(setting, before, now)
-    print("onSettingChanged", setting, before, now, _G["cc"].settings.mineStopOrder)
-    if mine.settingsCommands[setting] then
-        mine[mine.settingsCommands[setting]]()
     end
 end
 
@@ -232,12 +199,12 @@ function mine.secure()
     local data = {}
     data.squads= mine.squads
     data.order = mine.order
-    data.state = mine.state
+    data.disabled = mine.disabled
     return data
 end
 
 function mine.restore(dataIn)
     mine.squads = dataIn.squads
     mine.order = dataIn.order
-    mine.state = mine.state
+    mine.disabled = dataIn.disabled or false
 end
