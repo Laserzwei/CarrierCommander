@@ -71,12 +71,14 @@ function attack.updateServer(timestep)
 
             if numSquads <= 0 then
                 broadcastInvokeClientFunction("applyStatus", -1)
+                print("Term 1")
                 terminate()
             else
                 broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
             end
         else
             broadcastInvokeClientFunction("applyStatus", -1)
+            print("Term 2")
             terminate()
         end
     end
@@ -96,6 +98,7 @@ function attack.disable()
     if attack.order ~= FighterOrders.Return then
         _G["cc"].unclaimSquads(attack.prefix, attack.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
+        print("Term 3")
         terminate()
     end
 end
@@ -213,19 +216,24 @@ function attack.findEnemy()
                   (hasTarget and (dist + distThreshold) < distance2(attack.target.translationf, currentPos))) then
                     if attack.checkEnemy(e) then
                         nearest = dist
-                        proposedTarget = e
+                        proposedTarget = e -- TODO unregisterCallback("onDestroyed", "onDestroyed")
                         priority = newPrio
                     end
                 end
             end
         end
         if valid(proposedTarget) then
+            proposedTarget:registerCallback("onDestroyed", "onDestroyed")
             attack.target = proposedTarget
             return true
         else
             return false
         end
     end
+end
+
+function attack.onDestroyed(index, lastDamageInflictor)
+    print("Target destroyed", index.number, lastDamageInflictor.number)
 end
 
 function attack.getPriority(entity)
@@ -287,6 +295,14 @@ function attack.setSquadsIdle()
     for _,squad in pairs(attack.squads) do
         fighterController:setSquadOrders(squad, attack.order, Entity().index)
     end
+end
+
+function attack.flyableCreated(entity)
+    print(Entity().name, "AC fly", entity.name)
+end
+
+function attack.entityEntered(entity)
+    print(Entity().name, "E entered", Entity(entity).name)
 end
 
 function attack.secure()
