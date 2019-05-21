@@ -31,7 +31,6 @@ function dockAll.updateServer(timestep)
     if numSquads <= 0 then
         broadcastInvokeClientFunction("resetUI")
         broadcastInvokeClientFunction("applyStatus", -1)
-        print("default term")
         terminate()
     else
         broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
