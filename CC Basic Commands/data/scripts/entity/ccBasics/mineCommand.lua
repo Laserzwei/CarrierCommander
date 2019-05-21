@@ -213,6 +213,7 @@ end
 function mine.onJump(shipIndex, x, y)
     if valid(mine.target) then
         mine.target:unregisterCallback("onDestroyed", "onTargetDestroyed")
+        mine.target = nil
     end
 end
 
