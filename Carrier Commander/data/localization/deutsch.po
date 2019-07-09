@@ -1,0 +1,6 @@
+
+msgid "Carrier Orders"
+msgstr "Träger Befehle"
+
+msgid "(unnamed)"
+msgstr "(unbenannt)"

@@ -1,8 +1,8 @@
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
-require ("faction")
-require ("utility")
-local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
+include ("faction")
+include ("utility")
+local docker = include ("data/scripts/lib/dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace dockAll
@@ -43,7 +43,7 @@ function dockAll.dockAllFighters()
         print("Carrier - dockAll couldn't dock Fighters, Fightercontroller missing")
         return
     end
-    local possibleCommands = _G["cc"].Config.carrierScripts
+    local possibleCommands = _G["cc"].commands
     for k,c in pairs(possibleCommands) do
         if k ~= "dockAll" then
             Entity():removeScript(c.path..".lua")
@@ -88,6 +88,7 @@ end
 
 function dockAll.disable()
     broadcastInvokeClientFunction("applyStatus", -1)
+    print("disable term")
     terminate()
 end
 

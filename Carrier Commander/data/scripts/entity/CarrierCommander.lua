@@ -1,20 +1,24 @@
 package.path = package.path .. ";data/scripts/lib/?.lua"
 
-require ("stringutility")
-require ("utility")
-require ("callable")
+include ("stringutility")
+include ("utility")
+include ("callable")
+include ("faction")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace cc
 cc = {}
 
 --data
-cc.Config = require("mods/CarrierCommander/config/CarrierCommanderConfig") --server settings, carrierScripts
-cc.l = require("mods/CarrierCommander/scripts/lib/lists") --contains selectableOrderNames, uiElementToSettingMap, actionTostringMap, tooltipadditions
+cc.Config = include("data/config/CarrierCommanderConfig") -- server settings
+cc.l = include("data/scripts/lib/lists") -- contains selectableOrderNames, uiElementToSettingMap, actionTostringMap, tooltipadditions
+cc.commands = include("data/scripts/entity/commandHook") -- All commands register here
+
 cc.settings = {} --playersettings
-cc.commands = {}
-for k,v in pairs(cc.Config.carrierScripts) do cc.commands[k] = v end
 cc.claimedSquads = {}   -- <SquadIndex> = "scriptnamespace"
+
+-- Interaction permissions
+cc.interactionpermissions = {AlliancePrivilege.ManageShips, AlliancePrivilege.FlyCrafts, AlliancePrivilege.ModifyCrafts}
 
 --UI
 local numButtons = 0
@@ -23,7 +27,6 @@ cc.pictures = {}  --[pictureId] = commandPrefix
 local sortedPrefixes = {}
 
 --UI config_tab
-
 cc.configPos = 0
 cc.configSize = 0
 
@@ -37,7 +40,6 @@ function cc.initialize()
         if Entity().isDrone then terminate()  return end
     end
 end
-
 
 function cc.getIcon(seed, rarity)
     return "data/textures/icons/fighter.png"
@@ -67,8 +69,8 @@ function iconRect(r)
 end
 
 function cc.interactionPossible(playerIndex, option)
-    local factionIndex = Entity().factionIndex
-    if not Entity().isDrone and (factionIndex == playerIndex or factionIndex == Player().allianceIndex) then
+    local ship = Entity()
+    if not Entity().isDrone and checkEntityInteractionPermissions(ship, unpack(cc.interactionpermissions)) then
         return true
     end
     return false
@@ -82,16 +84,15 @@ function cc.initUI()
     local menu = ScriptUI()
     cc.window = menu:createWindow(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5))
 
-    cc.window.caption = "Fighter Orders"
+    cc.window.caption = "Carrier Orders"%_t
     cc.window.showCloseButton = 1
     cc.window.moveable = 1
 
-    menu:registerWindow(cc.window, "Carrier Orders")
+    menu:registerWindow(cc.window, "Carrier Orders"%_t)
     local tabbedWindow = cc.window:createTabbedWindow(Rect(vec2(10, 10), size - 10))
-    local tab = tabbedWindow:createTab("Entity", "data/textures/icons/fighter.png", "Ship Commands")
+    local tab = tabbedWindow:createTab("Entity", "data/textures/icons/fighter.png", "Commands"%_t)
 
     numButtons = 0
-
     for k in pairs(cc.commands) do table.insert(sortedPrefixes, k) end
     table.sort(sortedPrefixes)
     for _,prefix in ipairs(sortedPrefixes) do
@@ -111,14 +112,14 @@ function cc.initUI()
     --"==========================================================================================="
     --"==================================  CONFIG TAB ============================================"
     --"==========================================================================================="
-    local tab = tabbedWindow:createTab("Settings", "data/textures/icons/cog.png", "Settings")
+    local tab = tabbedWindow:createTab("Settings", "data/textures/icons/cog.png", "Settings"%_t)
     local pos = vec2(10,11)
 
     local scrollframe = tab:createScrollFrame(Rect(vec2(0,0), tab.size))
     scrollframe.scrollSpeed = 35
     --init config
     for _,prefix in ipairs(sortedPrefixes) do
-        local c = require(cc.commands[prefix].path.."_config")
+        local c = include(cc.commands[prefix].path.."_config")
         if c.initConfigUI then
             local seperator = scrollframe:createLine(pos+vec2(-9,17), (pos+vec2(scrollframe.size.x-31,17)))
             seperator.color = ColorRGB(0.5, 0.5, 0.5)
@@ -227,10 +228,8 @@ function cc.buttonActivate(button)
     if onClient() then
         local prefix = cc.buttons[button.index]
         invokeServerFunction("buttonActivate", prefix)
-        if prefix ~= "dockAll" then
-            button.caption = cc.commands[prefix].name.." [D]"
-            button.onPressedFunction = "buttonDeactivate"
-        end
+        button.caption = cc.commands[prefix].name.." [D]"
+        button.onPressedFunction = "buttonDeactivate"
     else
         Entity():addScriptOnce(cc.commands[button].path)
     end

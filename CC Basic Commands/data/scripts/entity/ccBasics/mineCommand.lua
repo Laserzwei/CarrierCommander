@@ -1,8 +1,8 @@
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
-require ("faction")
-require ("utility")
-local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
+include ("faction")
+include ("utility")
+local docker = include ("data/scripts/lib/dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace mine
@@ -163,12 +163,19 @@ function mine.findMinableAsteroid()
         currentPos = ship.translationf
     end
 
+
+
+
+
+    local hasMiningSystem = ship:hasScript("systems/miningsystem.lua")
     local asteroids = {sector:getEntitiesByType(EntityType.Asteroid)}
     local nearest = math.huge
     --Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(asteroids) do
         local resources = a:getMineableResources()
-        if ((resources ~= nil and resources > 0) or _G["cc"].settings["mineAllSetting"]) then
+        if ((a.isObviouslyMineable or hasMiningSystem) and
+           (resources ~= nil and resources > 0)) or
+            _G["cc"].settings["mineAllSetting"] then
             local dist = distance2(a.translationf, currentPos)
             if dist < nearest then
                 nearest = dist

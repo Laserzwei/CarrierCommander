@@ -1,8 +1,8 @@
 
 package.path = package.path .. ";data/scripts/lib/?.lua"
-require ("faction")
-require ("utility")
-local docker = require ("mods.CarrierCommander.scripts.lib.dockingLib")
+include ("faction")
+include ("utility")
+local docker = include ("data/scripts/lib/dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace repair
@@ -114,8 +114,14 @@ end
 
 function repair.repair()
     local fighterController = FighterController(Entity().index)
+    local order
+    if repair.target.index.number == Entity().index.number then
+        order = FighterOrders.Defend
+    else
+        order = FighterOrders.Attack
+    end
     for _,squad in pairs(repair.squads) do
-        fighterController:setSquadOrders(squad, FighterOrders.Attack, repair.target.index)
+        fighterController:setSquadOrders(squad, order, repair.target.index)
     end
 end
 
