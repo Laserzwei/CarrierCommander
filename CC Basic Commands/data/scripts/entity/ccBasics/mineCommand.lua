@@ -57,14 +57,15 @@ end
 -- set final orders for all controlled squads
 function mine.disable()
     mine.target = nil
-    mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
+    local order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
     mine.squads = _G["cc"].getClaimedSquads(mine.prefix)
     for _,squad in pairs(mine.squads) do
-        fighterController:setSquadOrders(squad, mine.order, Entity().index)
+        fighterController:setSquadOrders(squad, order, Entity().index)
     end
     print("Disable")
-    if mine.order ~= FighterOrders.Return then
+    mine.state = "disabled"
+    if order ~= FighterOrders.Return then
         _G["cc"].unclaimSquads(mine.prefix, mine.squads)
         broadcastInvokeClientFunction("applyStatus", -1)
         print(Entity().name, "Mine Terminate")
@@ -170,10 +171,10 @@ end
 
 function mine.setSquadsIdle()
     local fighterController = FighterController(Entity().index)
-    mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
+    local order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
     print("Size C", tablelength(mine.squads))
     for _,squad in pairs(mine.squads) do
-        fighterController:setSquadOrders(squad, mine.order, Entity().index)
+        fighterController:setSquadOrders(squad, order, Entity().index)
     end
 end
 
@@ -191,18 +192,33 @@ end
 
 function mine.onSquadOrdersChanged(squadIndex, orders, targetId)
     if mine.squads[squadIndex] then
-        print(Entity().name, "Squad Order", squadIndex, orders, targetId.string)
+        print(Entity().name, "Squad Order", squadIndex, orders, targetId.string, mine.state)
+        if mine.state ~= "disabled" then
+
+        else
+        end
     end
 end
 
 function mine.onFighterAdded(squadIndex, fighterIndex, landed)
     print(Entity().name, "Fighter added", squadIndex, fighterIndex, landed)
-    if landed then
-        local missing, numsquads = mine.dockingFighters(mine.prefix, mine.squads)
-        if mine.state ~= "landing" then
+    if mine.squads[squadIndex] then
+        if landed then
+            local missing, landingSquads = mine.dockingFighters(mine.prefix, mine.squads)
+            if mine.state ~= "landing" and mine.state ~= "disabled" then  -- fighter landed, but there was no landing order
+                print("contra unclaimed", squadIndex)
+                _G["cc"].unclaimSquads(mine.prefix, {[squadIndex] = squadIndex})
+            end
 
+            if mine.state == "disabled" and missing == 0 then
+                _G["cc"].unclaimSquads(mine.prefix, mine.squads)
+                print("term after land")
+                terminate()
+            end
+            print(string.format("[E]Waiting for %i Fighter(s) in %i Squad(s) to dock at %s", missing, tablelength(landingSquads), Entity().name))
+        else
+            -- New figter added to this squad. Check for resource capabilities
         end
-        print(string.format("[E]Waiting for %i Fighter(s) in %i Squad(s) to dock at %s", missing, numsquads, Entity().name))
     end
 end
 
