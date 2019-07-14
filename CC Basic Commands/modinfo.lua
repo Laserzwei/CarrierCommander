@@ -21,7 +21,7 @@ meta =
 
     -- Version of your mod, should be in format 1.0.0 (major.minor.patch) or 1.0 (major.minor)
     -- This will be used to check for unmet dependencies or incompatibilities
-    version = "1.12",
+    version = "1.12.1",
 
     -- If your mod requires dependencies, enter them here. The game will check that all dependencies given here are met.
     -- Possible attributes:
@@ -40,7 +40,7 @@ meta =
     -- },
     dependencies = {
         {id = "1741735681", min = "1.12"},
-        {id = "Avorion", exact = "0.23.*"}
+        {id = "Avorion", min = "0.23.*", max = "0.24.*"}
     },
 
     -- Set to true if the mod only has to run on the server. Clients will get notified that the mod is running on the server, but they won't download it to themselves
