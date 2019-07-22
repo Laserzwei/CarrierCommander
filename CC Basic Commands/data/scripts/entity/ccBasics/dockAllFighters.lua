@@ -44,9 +44,11 @@ function dockAll.dockAllFighters()
         return
     end
     local possibleCommands = _G["cc"].commands
-    for k,c in pairs(possibleCommands) do
+    for k,_ in pairs(possibleCommands) do
         if k ~= "dockAll" then
-            Entity():removeScript(c.path..".lua")
+            if _G[k] then
+                _G[k].disable()
+            end
         end
     end
     for _,squad in pairs(dockAll.squads) do
