@@ -1,9 +1,8 @@
 Install instructions
-Place the contents of the "mods" folder into your /steam/.../Avorion/mods/ foldePlace the contents of /data/ in /Avorion/data/.
-This will overwrite:
+Make sure to subscribe to the Carrier Commander core mod:
+https://steamcommunity.com/sharedfiles/filedetails/?id=1741735681
 
-  /scripts/entity/init.lua
-  /scripts/entity/shipfounder.lua
+Enable the Basic Commands mod in Settings -> Mods. This will enable the core mod as well.
 
 For more see the wiki:
 https://www.github.com/Laserzwei/CarrierCommander/wiki
