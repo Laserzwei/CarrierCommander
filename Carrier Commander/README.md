@@ -3,13 +3,8 @@ Continuation of the Carrier Command Mod
 
 ### Install instructions
 
-Place the contents of the "mods" folder into your /steam/.../Avorion/mods/ folder.
+Enable this mod in Settings -> Mods.
 
-Place the contents of /data/ in /Avorion/data/.
-This will overwrite:
-
-  /scripts/entity/init.lua
-
-  /scripts/entity/shipfounder.lua
+You will need an additional commands package to gain accessible commands.
 
 For more see the [wiki](https://www.github.com/Laserzwei/CarrierCommander/wiki)
