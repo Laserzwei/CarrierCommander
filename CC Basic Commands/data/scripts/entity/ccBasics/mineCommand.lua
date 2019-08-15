@@ -2,6 +2,7 @@
 package.path = package.path .. ";data/scripts/lib/?.lua"
 include ("faction")
 include ("utility")
+include ("callable")
 local docker = include ("data/scripts/lib/dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
@@ -15,59 +16,70 @@ mine.squads = {}                 --[squadIndex] = squadIndex           --squads 
 mine.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 mine.settingsCommands = {mineStopOrder = "setSquadsIdle", mineAllSetting = "removeThis", mineSquadNearest = "removeThis"}
 mine.state = -1
+mine.stateArgs = {}
 
 function mine.removeThis()
     print(Entity().name, "Remove This!")
 end
 
-function mine.initialize()
-    deferredCallback(5, "postInitialize")
-end
-
-function mine.postInitialize()
+function mine.initializationFinished()
     if onServer() then
         mine.selectNewAndMine()
     else
-        mine.applyStatus("idle")
+        mine.applyState("idle")
     end
 end
 
-function mine.updateServer(timestep)
-
+function mine.applyState(state, ...)
+    if onServer() then
+        mine.state = state
+        mine.stateArgs = {...}
+        mine.sendState()
+    end
 end
 
-function mine.applyStatus(status, ...)
-    if onServer() then
-        mine.state = status
-        broadcastInvokeClientFunction("applyStatus", status, ...)
-    else
-        mine.state = status
-        --print("apply", string.format(_G["cc"].l.actionTostringMap[status], unpack(args or {})))
-        if _G["cc"].uiInitialized then
-            local args = {...}
+function mine.sendState()
+    broadcastInvokeClientFunction("receiveState", mine.state, mine.stateArgs)
+end
+callable(mine, "sendState")
 
-            local pic = _G["cc"].commands[mine.prefix].statusPicture
+function mine.receiveState(state, stateArgs)
+    if onClient() then
+        if mine.state == "disabled" and state ~= "enable" then
+            print("No apply", mine.state, state)
+            return
+        end
+        mine.state = state
+        mine.stateArgs = stateArgs
+        local cc = _G["cc"]
+        --print("apply", string.format(cc.l.actionTostringMap[state], unpack(args or {})))
+        if cc.uiInitialized then
+            local pic = cc.commands[mine.prefix].statePicture
 
-            pic.color = _G["cc"].l.actionToColorMap[status]
-            pic.tooltip = string.format(_G["cc"].l.actionTostringMap[status], unpack(args))
+            pic.color = cc.l.actionToColorMap[state]
+            pic.tooltip = string.format(cc.l.actionTostringMap[state], unpack(mine.stateArgs))
         end
     end
 end
 
 -- set final orders for all controlled squads
 function mine.disable()
+    if valid(mine.target) then
+        mine.target:unregisterCallback("onDestroyed", "onTargetDestroyed")
+    end
     mine.target = nil
-    local order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
+    local cc = _G["cc"]
+    local order = cc.settings.mineStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
-    mine.squads = _G["cc"].getClaimedSquads(mine.prefix)
+    mine.squads = cc.getClaimedSquads(mine.prefix)
     for _,squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, order, Entity().index)
     end
     print("Disable")
-    mine.state = "disabled"
+    mine.applyState("disabled")
     if order ~= FighterOrders.Return then
-        _G["cc"].unclaimSquads(mine.prefix, mine.squads)
-        broadcastInvokeClientFunction("applyStatus", -1)
+        cc.unclaimSquads(mine.prefix, mine.squads)
+        mine.sendState(-1)
         print(Entity().name, "Mine Terminate")
         terminate()
     end
@@ -81,10 +93,10 @@ function mine.selectNewAndMine()
         else
             mine.setSquadsIdle()
             print(Entity().name, "no asteroids found")
-            broadcastInvokeClientFunction("applyStatus", "noAsteroid")
+            broadcastInvokeClientFunction("applyState", "noAsteroid")
         end
     else
-        broadcastInvokeClientFunction("applyStatus", "targetButNoFighter")
+        broadcastInvokeClientFunction("applyState", "targetButNoFighter")
     end
 end
 
@@ -93,7 +105,7 @@ function mine.mine()
     for _,squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Attack, mine.target.index)
     end
-    broadcastInvokeClientFunction("applyStatus", "Mining")
+    broadcastInvokeClientFunction("applyState", "Mining")
 end
 
 function mine.getSquadsToManage()
@@ -123,8 +135,9 @@ function mine.findMineableAsteroid()
     local numID = ship.index.number
     local sector = Sector()
     local currentPos
+    local cc = _G["cc"]
 
-    if _G["cc"].settings["mineSquadNearest"] then
+    if cc.settings["mineSquadNearest"] then
         local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
         local num, pos = 0, vec3(0,0,0)
         for _,fighter in pairs(fighters) do
@@ -151,7 +164,7 @@ function mine.findMineableAsteroid()
         local resources = a:getMineableResources()
         if ((a.isObviouslyMineable or hasMiningSystem) and
            (resources ~= nil and resources > 0)) or
-            _G["cc"].settings["mineAllSetting"] then
+            cc.settings["mineAllSetting"] then
             local dist = distance2(a.translationf, currentPos)
             if dist < nearest then
                 nearest = dist
@@ -250,11 +263,13 @@ function mine.secure()
     data.squads= mine.squads
     data.order = mine.order
     data.state = mine.state
+    data.stateArgs = mine.stateArgs
     return data
 end
 
 function mine.restore(dataIn)
     mine.squads = dataIn.squads
     mine.order = dataIn.order
-    mine.state = mine.state
+    mine.state = dataIn.state
+    mine.stateArgs = dataIn.stateArgs
 end
