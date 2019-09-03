@@ -27,7 +27,8 @@ function dockAll.getUpdateInterval()
 end
 
 function dockAll.updateServer(timestep)
-    local total, numSquads = dockAll.dockingFighters(dockAll.prefix, dockAll.squads)
+    local total, squads = dockAll.dockingFighters(dockAll.prefix, dockAll.squads)
+    local numSquads = tablelength(squads)
     if numSquads <= 0 then
         broadcastInvokeClientFunction("resetUI")
         broadcastInvokeClientFunction("applyStatus", -1)

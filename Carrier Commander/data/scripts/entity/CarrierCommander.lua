@@ -42,19 +42,23 @@ cc.configPos = 0
 cc.configSize = 0
 
 
+cc.avorionInitializationFinished = false
 cc.uiInitialized = false
 
-local waitTime, waited = 5, false     --super angry I have to use this
 function cc.initialize()
-    deferredCallback(5, "postInitialize")
     if onServer() then
         --don't run carrier Commands on a drone!
         if Entity().isDrone then terminate()  return end
     end
 end
 
-function cc.postInitialize()
+function cc.initializationFinished()
+    cc.avorionInitializationFinished = true
     cc.registerCallbackss()
+    if onClient() then
+        print("request settings")
+        cc.requestSettingsFromServer()
+    end
 end
 
 function cc.registerCallbackss()
@@ -276,6 +280,18 @@ function cc.initUI()
     cc.requestSettingsFromServer()
 end
 
+function cc.onShowWindow()
+    for prefix, command in pairs(cc.commands) do
+        local commandScript = _G[prefix]
+        if commandScript then
+            local state = commandScript.state
+            local pic = command.statusPicture
+            pic.color = cc.l.actionToColorMap[state]
+            pic.tooltip = cc.l.actionTostringMap[state]
+        end
+    end
+end
+
 function cc.addOrdersToCombo(comboBox)
     comboBox:clear()
     for i,v in pairs(cc.l.selectableOrderNames) do
@@ -289,26 +305,29 @@ function cc.requestSettingsFromServer()
 end
 
 function cc.sendSettingsToClient()
-    if _G["cc"].Config.forceUnsupervisedTargeting then
+    if cc.Config.forceUnsupervisedTargeting then
         cc.settings["vanillaAttackPattern"] = true
     end
     invokeClientFunction(Player(callingPlayer), "receiveSettings", cc.settings)
 end
 callable(cc, "sendSettingsToClient")
 
+--change single setting value
+function cc.changeServerSettings(setting, value)
+    if onServer() then
+        local oldvalue = cc.settings[setting]
+        cc.settings[setting] = value
+        cc.onSettingChanged(setting, oldvalue, value)
+    end
+end
+callable(cc, "changeServerSettings")
+
 function cc.receiveSettings(pSettings)
     if onClient() then
         cc.settings = pSettings
-        cc.client_applySettings()
-        cc.updateButtons()  --called late to ensure scripts are loaded
-    end
-end
-
-function cc.updateButtons()
-    for prefix, command in pairs(cc.commands) do
-        if Entity():hasScript(command.path) then
-            command.activationButton.caption = command.name.." [D]"
-            command.activationButton.onPressedFunction = "buttonDeactivate"
+        if cc.uiInitialized then
+            cc.client_applySettings()
+            cc.updateButtons()
         end
     end
 end
@@ -316,24 +335,25 @@ end
 function cc.client_applySettings()
     for uiElemIndex, setting in pairs(cc.l.uiElementToSettingMap) do
         if valid(ValueComboBox(uiElemIndex)) then
-            ValueComboBox(uiElemIndex):setSelectedValueNoCallback(cc.settings[setting])
+            ValueComboBox(uiElemIndex):setSelectedValueNoCallback(cc.settings[setting.name] or setting.default)
         end
         if valid(CheckBox(uiElemIndex)) then
-            CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[setting])
+            CheckBox(uiElemIndex):setCheckedNoCallback(cc.settings[setting.name] or setting.default)
         end
         if valid(Slider(uiElemIndex)) then
-            Slider(uiElemIndex):setValueNoCallback(cc.settings[setting])
+            Slider(uiElemIndex):setValueNoCallback(cc.settings[setting.name] or setting.default)
         end
     end
 end
---change single setting value
-function cc.changeServerSettings(setting, value)
-    if onServer() then
-        cc.settings[setting] = value
-        cc.onSettingChanged(setting, cc.settings[setting], value)
+
+function cc.updateButtons()
+    for _, command in pairs(cc.commands) do
+        if Entity():hasScript(command.path) then
+            command.activationButton.caption = command.name.." [D]"
+            command.activationButton.onPressedFunction = "buttonDeactivate"
+        end
     end
 end
-callable(cc, "changeServerSettings")
 
 -- checks for every requested Squad, if it has been claimed by another script
 -- and returns all squads claimed by the requesting script
@@ -365,6 +385,71 @@ function cc.unclaimSquads(prefix, squads)
         end
     end
 end
+-- TODO START State system
+function mine.applyState(state, ...)
+    if onServer() then
+        printlog("Apply state: ", mine.state, state, ...)
+        if mine.state == "disabled" then
+            -- Docking gets an extra treating to make the orange indicator work
+            if state == FighterOrders.Return then
+                local tmp = mine.state
+                mine.state = state
+                mine.stateArgs = {...}
+                mine.sendState()
+                mine.state = tmp
+                return
+            end
+        end
+        mine.state = state
+        mine.stateArgs = {...}
+        mine.sendState()
+    end
+end
+
+-- No passable arguments, so no invalid states can be sneaked in
+function cc.sendState()
+    broadcastInvokeClientFunction("receiveState", mine.state, mine.stateArgs)
+end
+callable(mine, "sendState")
+
+function cc.receiveState(state, stateArgs)
+    if onClient() then
+        printlog("Received state: ", mine.state, state, unpack(stateArgs or {}))
+        if mine.state == "disabled" then
+            --TODO  Docking gets an extra treating to make the orange indicator work. Maybe here as well. We'll see
+            if state == FighterOrders.Return then
+
+            end
+        end
+        mine.state = state
+
+        mine.stateArgs = stateArgs
+        if cc.uiInitialized then
+            local pic = cc.commands[mine.prefix].statusPicture
+
+            pic.color = cc.l.actionToColorMap[state]
+            pic.tooltip = string.format(cc.l.actionTostringMap[state], unpack(mine.stateArgs))
+        end
+    end
+end
+-- TODO END State system
+
+-- Gets called from a command to reset the statusPicture after it terminated.
+function cc.clearIndicator(prefix)
+    if onServer() then
+        broadcastInvokeClientFunction("clearIndicator", prefix)
+        return
+    end
+    -- Client
+    if cc.uiInitialized then
+        local pic = cc.commands[prefix].statusPicture
+        pic.color = cc.l.actionToColorMap[-1]
+        pic.tooltip = cc.l.actionTostringMap[-1]
+        local button = cc.commands[prefix].activationButton
+        button.caption = cc.commands[prefix].name.." [A]"
+        button.onPressedFunction = "buttonActivate"
+    end
+end
 
 function cc.buttonActivate(button)
     if onClient() then
@@ -374,6 +459,7 @@ function cc.buttonActivate(button)
         button.onPressedFunction = "buttonDeactivate"
     else
         Entity():addScriptOnce(cc.commands[button].path)
+        Entity():invokeFunction(cc.commands[button].path..".lua", "initializationFinished")
     end
 end
 callable(cc, "buttonActivate")
@@ -389,8 +475,10 @@ function cc.buttonDeactivate(button)
         button.caption = cc.commands[prefix].name.." [A]"
         button.onPressedFunction = "buttonActivate"
     else
-        if _G[button] then
-            Entity():invokeFunction(cc.commands[button].path..".lua", "disable")
+        local command = _G[button]
+        if command then
+            print("send disable", cc.commands[button].path..".lua")
+            command.disable()
         end
     end
 end
@@ -398,21 +486,21 @@ callable(cc, "buttonDeactivate")
 
 --SETTINGS
 function cc.onCheckBoxChecked(checkbox)
-    cc.settings[cc.l.uiElementToSettingMap[checkbox.index]] = checkbox.checked
+    cc.settings[cc.l.uiElementToSettingMap[checkbox.index].name] = checkbox.checked
     --print(Entity().name, "checkbox checked:", cc.l.uiElementToSettingMap[checkbox.index], checkbox.checked)
-    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[checkbox.index], checkbox.checked)
+    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[checkbox.index].name, checkbox.checked)
 end
 
 function cc.onComboBoxSelected(comboBox)
-    cc.settings[cc.l.uiElementToSettingMap[comboBox.index]] = comboBox.selectedValue
+    cc.settings[cc.l.uiElementToSettingMap[comboBox.index].name] = comboBox.selectedValue
     --print(Entity().name,"comboBox Select", cc.l.uiElementToSettingMap[slider.index], comboBox.selectedValue, comboBox.selectedEntry)
-    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[comboBox.index], comboBox.selectedValue)
+    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[comboBox.index].name, comboBox.selectedValue)
 end
 
 function cc.onSliderValueChanged(slider)
-    cc.settings[cc.l.uiElementToSettingMap[slider.index]] = slider.value
+    cc.settings[cc.l.uiElementToSettingMap[slider.index].name] = slider.value
     --print(Entity().name, "Slider changed:", cc.l.uiElementToSettingMap[slider.index], slider.value)
-    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[slider.index], slider.value)
+    invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[slider.index].name, slider.value)
 end
 
 --Data securing
