@@ -1,7 +1,7 @@
 local printer = {}
 
 printer.identifier = "[Identifier Not Set]"
-local oldprintlog = printlog
+local oldprintlog = print
 function printer.printlog(...)
     local x,y = Sector():getCoordinates()
     oldprintlog("[" .. os.date("%Y-%m-%d %X") .. "] "..printer.identifier, x, y, Entity().name, ...)

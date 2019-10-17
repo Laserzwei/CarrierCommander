@@ -284,10 +284,9 @@ function cc.onShowWindow()
     for prefix, command in pairs(cc.commands) do
         local commandScript = _G[prefix]
         if commandScript then
-            local state = commandScript.state
             local pic = command.statusPicture
-            pic.color = cc.l.actionToColorMap[state]
-            pic.tooltip = cc.l.actionTostringMap[state]
+            pic.color = cc.l.actionToColorMap[commandScript.state]
+            pic.tooltip = commandScript.createStatusMessage()
         end
     end
 end
@@ -385,54 +384,16 @@ function cc.unclaimSquads(prefix, squads)
         end
     end
 end
--- TODO START State system
-function mine.applyState(state, ...)
-    if onServer() then
-        printlog("Apply state: ", mine.state, state, ...)
-        if mine.state == "disabled" then
-            -- Docking gets an extra treating to make the orange indicator work
-            if state == FighterOrders.Return then
-                local tmp = mine.state
-                mine.state = state
-                mine.stateArgs = {...}
-                mine.sendState()
-                mine.state = tmp
-                return
-            end
-        end
-        mine.state = state
-        mine.stateArgs = {...}
-        mine.sendState()
+
+if onClient() then
+function cc.changeIndicator(prefix, text, color)
+    if cc.uiInitialized then
+        local pic = cc.commands[prefix].statusPicture
+        pic.color = color
+        pic.tooltip = text
     end
 end
-
--- No passable arguments, so no invalid states can be sneaked in
-function cc.sendState()
-    broadcastInvokeClientFunction("receiveState", mine.state, mine.stateArgs)
 end
-callable(mine, "sendState")
-
-function cc.receiveState(state, stateArgs)
-    if onClient() then
-        printlog("Received state: ", mine.state, state, unpack(stateArgs or {}))
-        if mine.state == "disabled" then
-            --TODO  Docking gets an extra treating to make the orange indicator work. Maybe here as well. We'll see
-            if state == FighterOrders.Return then
-
-            end
-        end
-        mine.state = state
-
-        mine.stateArgs = stateArgs
-        if cc.uiInitialized then
-            local pic = cc.commands[mine.prefix].statusPicture
-
-            pic.color = cc.l.actionToColorMap[state]
-            pic.tooltip = string.format(cc.l.actionTostringMap[state], unpack(mine.stateArgs))
-        end
-    end
-end
--- TODO END State system
 
 -- Gets called from a command to reset the statusPicture after it terminated.
 function cc.clearIndicator(prefix)
