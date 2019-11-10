@@ -39,9 +39,22 @@ local ordernames = {
 }
 function mine.initializationFinished()
     if onServer() then
-        if mine.state ~= "Disengaged" then
+        if mine.state == "Disengaged" then
             mine.selectNewAndMine()
-            --mine.scoopLoot(Entity().translationf)
+        elseif mine.state == "NoCargospace" then
+            if Entity().freeCargoSpace < 10 then
+                mine.getSquadsToManage()
+                if mine.hasRawLasers == true then
+                    print("Raw mining/salvaging fighters are now properly detected. If you read this inform Laserzwei to update his Carrier Commander Mod.")
+                else
+                    print("Raw mining/salvaging fighters are still not properly detected. Also re-enable your mining/salvaging command!")
+                end
+                --mine.selectNewAndMine() --uncomment when fixed
+            else
+                mine.selectNewAndMine()
+            end
+        else
+            mine.selectNewAndMine()
         end
     else
         invokeServerFunction("sendState") -- makes sure the current state is available on client
@@ -127,8 +140,11 @@ function mine.callTerminate()
     local state = Entity():invokeFunction(path, "terminatus")
     if state == 3 then
         -- TODO Remove once windows pathing is fixed
+        print("Fixed yet? - No!")
         local repathed = string.gsub(path, "/", "\\")
         local state = Entity():invokeFunction(repathed, "terminatus")
+    else
+        print("Fixed yet? - Maybe yes")
     end
 end
 
@@ -138,20 +154,34 @@ end
 
 function mine.selectNewAndMine()
     if mine.getSquadsToManage() then
-        if (mine.hasRawLasers == true and Entity().freeCargoSpace > 1) or mine.hasRawLasers == false then
+        print("Has Raw?", mine.hasRawLasers)
+        if mine.hasRawLasers == false or (mine.hasRawLasers == true and Entity().freeCargoSpace > 10) then
             local mining = {mine.findMineableAsteroid()} -- mining[1] contains success, [2] is the subsequent state, [3] are stateArgs, [4] is action, [5] actionState
             if mining[1] then
+                if mine.hasRawLasers == true then
+                    Entity():registerCallback("onCargoChanged", "onCargoChanged")
+                    printlog("Enabled cargo watch")
+                end
                 mine.mine()
             else
+                Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
                 mine.setSquadsIdle()
                 table.remove(mining, 1) -- remove success, to only keep state & action and their Args
                 mine.applyState(unpack(mining))
             end
         else
-            mine.applyState("TargetButNoFighter", {}, "None", {})
+            if mine.hasRawLasers == true then
+                Entity():registerCallback("onCargoChanged", "onCargoChanged")
+                printlog("Enabled cargo watch")
+            else
+                Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
+            end
+            mine.setSquadsIdle()
+            mine.applyState("NoCargospace", {}, "None", {})
         end
     else
-        mine.applyState("NoCargospace", {}, "None", {})
+        Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
+        mine.applyState("TargetButNoFighter", {}, "None", {})
     end
 end
 
@@ -176,6 +206,7 @@ function mine.getSquadsToManage()
     mine.squads = cc.claimSquads(mine.prefix, squads)
     mine.hasRawLasers = false
     for _,squad in pairs(mine.squads) do
+        print("Set raw", mine.hasRawLasers, hangar:getSquadHasRawMinersOrSalvagers(squad), squad, mine.miningMaterial)
         mine.hasRawLasers = mine.hasRawLasers or hangar:getSquadHasRawMinersOrSalvagers(squad)
         if mine.miningMaterial == nil or hangar:getHighestMaterialInSquadMainCategory(squad).value > mine.miningMaterial then
             mine.miningMaterial = hangar:getHighestMaterialInSquadMainCategory(squad).value
@@ -193,6 +224,7 @@ end
 -- if there is one, assign mine.target
 function mine.findMineableAsteroid()
     local state, stateArgs, action, actionArgs
+    local oldtarget = valid(mine.target) and mine.target.index.number or 0
     mine.target = nil
     local ship = Entity()
     local sector = Sector()
@@ -204,7 +236,7 @@ function mine.findMineableAsteroid()
         local FighterController = FighterController()
         local num, pos = 0, vec3(0,0,0)
         for _,squad in pairs(mine.squads) do
-            for _,fighter in pairs(FighterController():getDeployedFighters(squad)) do
+            for _,fighter in pairs({FighterController():getDeployedFighters(squad)}) do
                 num = num + 1
                 pos = pos + fighter.translationf
             end
@@ -226,7 +258,7 @@ function mine.findMineableAsteroid()
     for _, a in pairs(asteroids) do
         if cc.settings["mineAllSetting"] then -- Mining all Asteroids regardless of their resources
             local dist = distance2(a.translationf, currentPos)
-            if dist < nearest then
+            if dist < nearest and oldtarget ~= a.index.number then
                 nearest = dist
                 mine.target = a
             end
@@ -237,7 +269,7 @@ function mine.findMineableAsteroid()
                     local material = a:getLowestMineableMaterial()
                     if material.value <= mine.miningMaterial + 1 then
                         local dist = distance2(a.translationf, currentPos)
-                        if dist < nearest then
+                        if dist < nearest and oldtarget ~= a.index.number then
                             nearest = dist
                             --print("Selected Asteroid with material:", material.name, c)
                             mine.target = a
@@ -282,66 +314,26 @@ function mine.setSquadsIdle()
     end
 end
 
-function mine.scoopLoot(position)
-    local possibleLoot = {Sector():getEntitiesByType(EntityType.Loot)}
-    local ship = Entity()
-    local loots, c = {}, 1
-
-    for _, loot in pairs(possibleLoot) do
-        if loot:isCollectable(ship) and distance(loot.translationf, position) < 40000 then
-            loots[c] = loot
-            mine.looterlist[loot.index.string] = false
-            c = c + 1
+function mine.onCargoChanged(objectIndex, delta, good)
+    print("Cargo changed", objectIndex.string, delta, good.name, Entity().freeCargoSpace)
+    if (mine.hasRawLasers == true and Entity().freeCargoSpace < 10) then
+        if mine.state ~= "NoCargospace" then
+            mine.setSquadsIdle()
+            mine.applyState("NoCargospace", {}, "None", {})
         end
+    --Continue mining, after cargo got removed
+    elseif delta < 0 and (mine.hasRawLasers == true and Entity().freeCargoSpace > 10) then
+        print("cargo removed?", delta)
+        mine.selectNewAndMine()
+    elseif mine.hasRawLasers == false then
+        Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
+        mine.selectNewAndMine()
     end
-    print("found #loot", #loots, #possibleLoot)
-
-    local allFighters = {}
-    local x = 1
-    local a,s = next(mine.squads)
-
-    for _,squad in pairs(mine.squads) do
-        for _,f in pairs({FighterController():getDeployedFighters(squad)}) do
-            allFighters[#allFighters+1] = f
-        end
-    end
-    print("found #fighters", #allFighters)
-
-    local maxToSend = math.min(#loots, #allFighters)
-    for i=1, maxToSend do
-        mine.looterlist[loots[i].index.string] = allFighters[i].index.string
-        local ai = FighterAI(allFighters[i].index)
-        allFighters[i]:registerCallback("onLootCollected", "onLootCollected")
-        ai.clearFeedbackEachTick = false
-        ai.ignoreMothershipOrders = true
-        ai:setOrders(FighterOrders.Harvest, loots[i].index)
-    end
-    printTable(mine.looterlist)
 end
 
 function mine.onTargetDestroyed(index, lastDamageInflictor)
-    print("Etype:", EntityType.Asteroid)
     printlog("Target destroyed", index.string, valid(mine.target), mine.target.type, mine.target.translationf:__tostring())
-    mine.scoopLoot(mine.target.translationf)
-    -- TODO scoop up loot in sphere around (2km). create one list
-    -- send every fighter off to a different piece of loot of that list
-    -- list [loot-uuid] = fighter-ID/false map, when loot gets "onLootDestroyed", to recognise it.
-    -- finally on scooped up all loot (list empty)
-    --mine.selectNewAndMine()
-end
-
-function mine.onLootCollected(collector, lootIndex)
-    print("Fighter collected", lootIndex.string, collector.index.string)
-    mine.looterlist[lootIndex] = nil
-    for k,v in pairs(mine.looterlist) do
-        if v == false then
-            mine.looterlist[k] = collector.index.string
-            local ai = FighterAI(collector.index)
-            ai.clearFeedbackEachTick = false
-            ai.ignoreMothershipOrders = true
-            ai:setOrders(FighterOrders.Harvest, Uuid(k))
-        end
-    end
+    mine.selectNewAndMine()
 end
 
 -- only change Asteroid, when no other is available
