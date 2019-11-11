@@ -7,6 +7,7 @@ include ("callable")
 local docker = include ("data/scripts/lib/dockingLib")
 local printer = include ("data/scripts/lib/printlib")
 printer.identifier = "[CC-Minecommand] "
+printer.minPrintLevel = "All"
 printlog = printer.printlog
 print = printer.print
 
@@ -45,9 +46,10 @@ function mine.initializationFinished()
             if Entity().freeCargoSpace < 10 then
                 mine.getSquadsToManage()
                 if mine.hasRawLasers == true then
-                    print("Raw mining/salvaging fighters are now properly detected. If you read this inform Laserzwei to update his Carrier Commander Mod.")
+                    printlog("Info","Raw mining/salvaging fighters are now properly detected. If you read this inform Laserzwei to update his Carrier Commander Mod.")
                 else
-                    print("Raw mining/salvaging fighters are still not properly detected. Also re-enable your mining/salvaging command!")
+                    printlog("Info","Raw mining/salvaging fighters are still not properly detected. Also re-enable your mining/salvaging command!")
+                    Entity():registerCallback("onCargoChanged", "onCargoChanged")
                 end
                 --mine.selectNewAndMine() --uncomment when fixed
             else
@@ -63,8 +65,8 @@ end
 
 function mine.applyState(state, stateArgs, action, actionArgs)
     if onServer() then
-        printlog("Apply State: ", mine.state, state, unpack(stateArgs))
-        printlog("Apply Action: ", mine.action, action, unpack(actionArgs))
+        printlog("Info","Apply State: ", mine.state, state, unpack(stateArgs))
+        printlog("Info","Apply Action: ", mine.action, action, unpack(actionArgs))
         mine.state = state
         mine.stateArgs = stateArgs or {}
         mine.action = action
@@ -80,13 +82,13 @@ end
 callable(mine, "sendState")
 
 function cc.receiveMineState(...)
-    --print("cc receiveMineState")
+    printlog("All","cc receiveMineState")
     mine.receiveMineState(...)
 end
 
 function mine.receiveMineState(state, stateArgs, action, actionArgs)
     if onClient() then
-        printlog("Received state: ", mine.state, state, unpack(stateArgs), mine.action, action, unpack(actionArgs))
+        printlog("All","Received state: ", mine.state, state, unpack(stateArgs), mine.action, action, unpack(actionArgs))
         mine.state = state
         mine.stateArgs = stateArgs
         mine.action = action
@@ -119,7 +121,7 @@ function mine.disable()
 
     if order ~= FighterOrders.Return then
         mine.applyState("Disengaged", {}, "None", {})
-        printlog("Mine Terminate")
+        printlog("Debug","Mine Terminate")
         mine.callTerminate()
     else
         local total, landing = docker.dockingFighters(mine.prefix, mine.squads)
@@ -127,7 +129,7 @@ function mine.disable()
         local actionArgs = {total, tablelength(landing), Entity().name}
         mine.applyState("Disengaged", {}, action, actionArgs)
         if total <= 0 then
-            printlog("Mine [D] Terminate")
+            printlog("Debug","Mine [D] Terminate")
             mine.callTerminate()
         end
     end
@@ -140,11 +142,11 @@ function mine.callTerminate()
     local state = Entity():invokeFunction(path, "terminatus")
     if state == 3 then
         -- TODO Remove once windows pathing is fixed
-        print("Fixed yet? - No!")
+        printlog("Error","Fixed yet? - No!")
         local repathed = string.gsub(path, "/", "\\")
         local state = Entity():invokeFunction(repathed, "terminatus")
     else
-        print("Fixed yet? - Maybe yes")
+        printlog("Warn","Fixed yet? - Maybe yes")
     end
 end
 
@@ -154,13 +156,13 @@ end
 
 function mine.selectNewAndMine()
     if mine.getSquadsToManage() then
-        print("Has Raw?", mine.hasRawLasers)
+        printlog("Debug","Has Raw?", mine.hasRawLasers)
         if mine.hasRawLasers == false or (mine.hasRawLasers == true and Entity().freeCargoSpace > 10) then
             local mining = {mine.findMineableAsteroid()} -- mining[1] contains success, [2] is the subsequent state, [3] are stateArgs, [4] is action, [5] actionState
             if mining[1] then
                 if mine.hasRawLasers == true then
                     Entity():registerCallback("onCargoChanged", "onCargoChanged")
-                    printlog("Enabled cargo watch")
+                    printlog("Debug","Enabled cargo watch")
                 end
                 mine.mine()
             else
@@ -172,7 +174,7 @@ function mine.selectNewAndMine()
         else
             if mine.hasRawLasers == true then
                 Entity():registerCallback("onCargoChanged", "onCargoChanged")
-                printlog("Enabled cargo watch")
+                printlog("Debug","Enabled cargo watch2")
             else
                 Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
             end
@@ -206,7 +208,7 @@ function mine.getSquadsToManage()
     mine.squads = cc.claimSquads(mine.prefix, squads)
     mine.hasRawLasers = false
     for _,squad in pairs(mine.squads) do
-        print("Set raw", mine.hasRawLasers, hangar:getSquadHasRawMinersOrSalvagers(squad), squad, mine.miningMaterial)
+        printlog("All", "Set raw", mine.hasRawLasers, hangar:getSquadHasRawMinersOrSalvagers(squad), squad, mine.miningMaterial)
         mine.hasRawLasers = mine.hasRawLasers or hangar:getSquadHasRawMinersOrSalvagers(squad)
         if mine.miningMaterial == nil or hangar:getHighestMaterialInSquadMainCategory(squad).value > mine.miningMaterial then
             mine.miningMaterial = hangar:getHighestMaterialInSquadMainCategory(squad).value
@@ -271,7 +273,7 @@ function mine.findMineableAsteroid()
                         local dist = distance2(a.translationf, currentPos)
                         if dist < nearest and oldtarget ~= a.index.number then
                             nearest = dist
-                            --print("Selected Asteroid with material:", material.name, c)
+                            printlog("All","Selected Asteroid with material:", material.name, c)
                             mine.target = a
                         end
                     else
@@ -315,7 +317,7 @@ function mine.setSquadsIdle()
 end
 
 function mine.onCargoChanged(objectIndex, delta, good)
-    print("Cargo changed", objectIndex.string, delta, good.name, Entity().freeCargoSpace)
+    printlog("All","Cargo changed", objectIndex.string, delta, good.name, Entity().freeCargoSpace)
     if (mine.hasRawLasers == true and Entity().freeCargoSpace < 10) then
         if mine.state ~= "NoCargospace" then
             mine.setSquadsIdle()
@@ -323,7 +325,7 @@ function mine.onCargoChanged(objectIndex, delta, good)
         end
     --Continue mining, after cargo got removed
     elseif delta < 0 and (mine.hasRawLasers == true and Entity().freeCargoSpace > 10) then
-        print("cargo removed?", delta)
+        printlog("Debug","cargo removed?", delta)
         mine.selectNewAndMine()
     elseif mine.hasRawLasers == false then
         Entity():unregisterCallback("onCargoChanged", "onCargoChanged")
@@ -332,7 +334,7 @@ function mine.onCargoChanged(objectIndex, delta, good)
 end
 
 function mine.onTargetDestroyed(index, lastDamageInflictor)
-    printlog("Target destroyed", index.string, valid(mine.target), mine.target.type, mine.target.translationf:__tostring())
+    printlog("Debug","Target destroyed", index.string, valid(mine.target), mine.target.type, mine.target.translationf:__tostring())
     mine.selectNewAndMine()
 end
 
@@ -345,29 +347,31 @@ end
 
 function mine.onSquadOrdersChanged(squadIndex, order, targetId)
     if mine.squads[squadIndex] then
-        printlog("Squad Order", squadIndex, ordernames[order], targetId.string, mine.state)
+        printlog("Debug","Squad Order", squadIndex, ordernames[order], targetId.string, mine.state)
         -- we are waiting to get Disengaged and a different order was send to our last squad.
         -- Which makes waiting pointless. Our Job is done.
         if mine.state == "Disengaged" and order ~= cc.settings.mineStopOrder then
             if tablelength(mine.squads) <= 1 then
-                printlog("squad changed terminate", cc.settings.mineStopOrder)
+                printlog("Debug","squad changed terminate", cc.settings.mineStopOrder)
                 mine.callTerminate()
             else --
                 cc.unclaimSquads(mine.prefix, {[squadIndex] = squadIndex})
             end
+        elseif mine.state ~= "Disengaged" and targetId.string == "00000000-0000-0000-0000-000000000000" then -- vanilla orderchain command fucking things up
+            mine.selectNewAndMine()
         end
     end
 end
 
 function mine.onFighterAdded(squadIndex, fighterIndex, landed)
-    --printlog("Fighter added", squadIndex, fighterIndex, landed)
+    printlog("All","Fighter added", squadIndex, fighterIndex, landed)
     if mine.squads[squadIndex] then
         if landed then
             local state, stateArgs, action, actionArgs = mine.state, mine.stateArgs, mine.action, mine.actionArgs
             local missing, landingSquads = mine.dockingFighters(mine.prefix, mine.squads)
             if mine.state == "Disengaged" then
                 if missing <= 0 then
-                    printlog("Disengaged and all fighters returned")
+                    printlog("Debug","Disengaged and all fighters returned")
                     mine.callTerminate()
                     return
                 end
@@ -381,7 +385,7 @@ function mine.onFighterAdded(squadIndex, fighterIndex, landed)
             end
             mine.applyState(state, stateArgs, action, actionArgs)
         else
-            printlog("New fighter added", squadIndex, fighterIndex)
+            printlog("Debug","New fighter added", squadIndex, fighterIndex)
             if valid(mine.target) then mine.target:unregisterCallback("onDestroyed", "onDestroyed") end
             mine.target = nil
             mine.selectNewAndMine()
@@ -394,7 +398,7 @@ function mine.onFighterRemove(squadIndex, fighterIndex, started)
     if started then
         -- mhh
     else
-        printlog("Fighter removed from squad", squadIndex, fighterIndex)
+        printlog("Debug","Fighter removed from squad", squadIndex, fighterIndex)
         if valid(mine.target) then mine.target:unregisterCallback("onDestroyed", "onDestroyed") end
         mine.target = nil
         mine.selectNewAndMine()
@@ -403,19 +407,19 @@ end
 
 function mine.onJump(shipIndex, x, y)
     if valid(mine.target) then
-        printlog("onjump")
+        printlog("Debug","onjump")
         mine.target:unregisterCallback("onDestroyed", "onTargetDestroyed")
         mine.target = nil
     end
 end
 
 function mine.onSectorEntered(shipIndex, x, y)
-    printlog("Entered Sector: ", x, y)
+    printlog("Debug","Entered Sector: ", x, y)
     mine.selectNewAndMine()
 end
 
 function mine.onSettingChanged(setting, before, now)
-    printlog("onSettingChanged", setting, before, now, cc.settings.mineStopOrder)
+    printlog("Debug","onSettingChanged", setting, before, now, cc.settings.mineStopOrder)
 end
 
 function mine.secure()
