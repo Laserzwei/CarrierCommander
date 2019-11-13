@@ -4,6 +4,11 @@ include ("faction")
 include ("utility")
 local docker = include ("data/scripts/lib/dockingLib")
 
+local printer = include ("data/scripts/lib/printlib")
+local aprinter = printer("[CC-DockAll] ", "Error")
+local print = function (...) return aprinter:print(...) end
+local printlog = function (...) return aprinter:printlog(...) end
+
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace dockAll
 dockAll = {}
@@ -33,6 +38,7 @@ function dockAll.updateServer(timestep)
         broadcastInvokeClientFunction("resetUI")
         broadcastInvokeClientFunction("applyStatus", -1)
         print("default term")
+        cc.unclaimSquads(dockAll.prefix, dockAll.squads)
         terminate()
     else
         broadcastInvokeClientFunction("applyStatus", FighterOrders.Return, total, numSquads, Entity().name)
