@@ -3,7 +3,7 @@
 local dockAllCallbacks = {}
 hidden.addCommand("dockAll", "Dock all Fighters", "data/scripts/entity/ccBasics/dockAllFighters", dockAllCallbacks)
 
-local salvageCallbacks = {}
+local salvageCallbacks = {"onWreckageCreated", "onSquadOrdersChanged", "onFighterAdded", "onJump", "onSectorEntered", "onSettingChanged"}
 hidden.addCommand("salvage", "Salvage Command", "data/scripts/entity/ccBasics/salvageCommand", salvageCallbacks)
 
 local mineCallbacks = {"onAsteroidCreated", "onSquadOrdersChanged", "onFighterAdded", "onJump", "onSectorEntered", "onSettingChanged"}
