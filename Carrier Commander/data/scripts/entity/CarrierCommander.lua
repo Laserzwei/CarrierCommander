@@ -5,6 +5,11 @@ include ("utility")
 include ("callable")
 include ("faction")
 
+local printer = include ("data/scripts/lib/printlib")
+local aprinter = printer("[CC-Core] ", "Error")
+local print = function (...) return aprinter:print(...) end
+local printlog = function (...) return aprinter:printlog(...) end
+
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace cc
 cc = {}
@@ -13,7 +18,11 @@ function cc.createCallbackList(commands)
     local list = {}
     for namespace, command in pairs(commands) do
         for _,callback in pairs(command.callbacks or {}) do
-            list[callback] = list[callback] and table.insert(list[callback], namespace) or {namespace}
+            if list[callback] then
+                table.insert(list[callback], namespace)
+            else
+                list[callback] = {namespace}
+            end
         end
     end
     return list
@@ -41,8 +50,6 @@ local sortedPrefixes = {}
 cc.configPos = 0
 cc.configSize = 0
 
-
-cc.avorionInitializationFinished = false
 cc.uiInitialized = false
 
 function cc.initialize()
@@ -53,11 +60,11 @@ function cc.initialize()
 end
 
 function cc.initializationFinished()
-    cc.avorionInitializationFinished = true
-    cc.registerCallbackss()
     if onClient() then
-        print("request settings")
+        printlog("Info", "request settings")
         cc.requestSettingsFromServer()
+    else
+        cc.registerCallbackss()
     end
 end
 
@@ -95,8 +102,8 @@ end
 
 function cc.eventCall(event, ...)
     if not cc.callbackList[event] then return end   -- a.k.a. : No command registered that callback
-    local ship = Entity()
-    for i, namespace in ipairs (cc.callbackList[event]) do
+    for i, namespace in ipairs(cc.callbackList[event]) do
+        printlog(Info", ""Event", namespace,  _G[namespace] ~= nil, event, ...)
         if _G[namespace] then   -- namespace is only available when the command is active
             --if _G[namespace][event] then    -- It's simply assumed that the modauthors, who added the event-callbackhook also implmented it
                 _G[namespace][event](...)
@@ -108,80 +115,78 @@ end
 function cc.onEntityCreate(entityId)
     local entity = Entity(entityId)
     if entity.isFlyable then    -- Stations, Drone, Ship, Fighter
-        --print(Entity().name, "Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
+        printlog("Info", Entity().name, "Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
         cc.eventCall("onFlyableCreated", entity)
     elseif entity.isAsteroid then
-        --print(Entity().name, "Asteroid created", entity.typename)
+        printlog("Info", Entity().name, "Asteroid created", entity.typename)
         cc.eventCall("onAsteroidCreated", entity)
     elseif entity.isWreckage then
-        --print(Entity().name, "Wreckage created", entity.typename)
+        printlog("Info", Entity().name, "Wreckage created", entity.typename)
         cc.eventCall("onWreckageCreated", entity)
     elseif entity.isLoot then
-        --print(Entity().name, "Loot created", entity.typename)
+        printlog("Info", Entity().name, "Loot created", entity.typename)
         cc.eventCall("onLootCreated", entity)
     else
-        --print(Entity().name, "* created", entity.typename, entity.isTurret, entity.isAnomaly, entity.isUnknown, entity.isOther, entity.isWormHole)
+        printlog("Info", Entity().name, "* created", entity.typename, entity.isTurret, entity.isAnomaly, entity.isUnknown, entity.isOther, entity.isWormHole)
         --cc.eventCall("otherCreated", entity)
     end
 end
 
 function cc.onEntityEntered(shipIndex)
-    --print(Entity().name, "Entity Entered: ", Entity(shipIndex).name)
+    printlog("Info", Entity().name, "Entity Entered: ", Entity(shipIndex).name)
     cc.eventCall("onEntityEntered", shipIndex)
 end
 
 function cc.onSquadAdded(entityId, squadIndex)-- gets also called on squadRename
-    --print(Entity().name, "Squad Changed, added or renamed", squadIndex)
+    printlog("Info", Entity().name, "Squad Changed, added or renamed", squadIndex)
     cc.eventCall("onSquadAdded", squadIndex)
 end
 
 function cc.onSquadRemove(entityId, squadIndex)
-    --print(Entity().name, "Squad Changed, remove", squadIndex)
+    printlog("Info", Entity().name, "Squad Changed, remove", squadIndex)
     cc.eventCall("onSquadRemove", squadIndex)
 end
 
 function cc.onSquadOrdersChanged(entityId, squadIndex, orders, targetId)
-    --print(Entity().name, "Squad Order changed", squadIndex, orders, targetId, valid(Entity(targetId)) and Entity(targetId).name or "-E")
+    printlog("Info", Entity().name, "Squad Order changed", squadIndex, orders, targetId, valid(Entity(targetId)) and Entity(targetId).name or "-E")
     cc.eventCall("onSquadOrdersChanged", squadIndex, orders, targetId)
 end
 
 function cc.onFighterStarted(entityId, squadIndex, fighterId)
-    --local fAI = FighterAI(fighterId)
-    --print(Entity().name, Entity(entityId).name, "[AI] fighter started squad", squadIndex, cc.l.actionTostringMap[fAI.orders])
+    printlog("Info", Entity().name, Entity(entityId).name, "[AI] fighter started squad", squadIndex)
     cc.eventCall("onFighterStarted", squadIndex, fighterId)
 end
 
 function cc.onFighterLanded(entityId, squadIndex, fighterId)
-    --print(Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
+    printlog("Info", Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
     cc.eventCall("onFighterLanded", squadIndex, fighterId)
 end
 
 function cc.onFighterAdded(entityId, squadIndex, fighterIndex, landed)
-    --print(Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed)
+    printlog("Info", Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed)
     cc.eventCall("onFighterAdded", squadIndex, fighterIndex, landed)
 end
 
 function cc.onFighterRemove(entityId, squadIndex, fighterIndex, started) --entityTemplate is not accessable, even though it's supposed to be called BEFORE the fighter gets removed
-    --print(Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
+    printlog("Info", Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
     cc.eventCall("onFighterRemove", squadIndex, fighterIndex, started)
 end
 
 --gets called before sector change
 function cc.onJump(shipIndex, x, y)
-    --print(Entity().name, "on Jump", x, y)
+    printlog("Info", Entity().name, "on Jump", x, y)
     cc.unregisterSectorCallbacks(Sector():getCoordinates())
     cc.eventCall("onJump", shipIndex, x, y)
 end
 --gets called after sector change
 function cc.onSectorEntered(shipIndex, x, y)
-    --print(Entity().name, "on Sector entered", x, y)
+    printlog("Info", Entity().name, "on Sector entered", x, y)
     cc.registerSectorCallbacks(Sector():getCoordinates())
-    --deferredCallback(5, "eventCall", "onSectorEntered", shipIndex, x, y)
     cc.eventCall("onSectorEntered", shipIndex, x, y)
 end
 
 function cc.onSettingChanged(setting, before, now)
-    --print(Entity().name, setting, before, now)
+    printlog("Info", Entity().name, setting, before, now)
     cc.eventCall("onSettingChanged", setting, before, now)
 end
 
@@ -448,19 +453,19 @@ callable(cc, "buttonDeactivate")
 --SETTINGS
 function cc.onCheckBoxChecked(checkbox)
     cc.settings[cc.l.uiElementToSettingMap[checkbox.index].name] = checkbox.checked
-    --print(Entity().name, "checkbox checked:", cc.l.uiElementToSettingMap[checkbox.index], checkbox.checked)
+    printlog("Info", Entity().name, "checkbox checked:", cc.l.uiElementToSettingMap[checkbox.index], checkbox.checked)
     invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[checkbox.index].name, checkbox.checked)
 end
 
 function cc.onComboBoxSelected(comboBox)
     cc.settings[cc.l.uiElementToSettingMap[comboBox.index].name] = comboBox.selectedValue
-    --print(Entity().name,"comboBox Select", cc.l.uiElementToSettingMap[slider.index], comboBox.selectedValue, comboBox.selectedEntry)
+    printlog("Info", Entity().name,"comboBox Select", cc.l.uiElementToSettingMap[slider.index], comboBox.selectedValue, comboBox.selectedEntry)
     invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[comboBox.index].name, comboBox.selectedValue)
 end
 
 function cc.onSliderValueChanged(slider)
     cc.settings[cc.l.uiElementToSettingMap[slider.index].name] = slider.value
-    --print(Entity().name, "Slider changed:", cc.l.uiElementToSettingMap[slider.index], slider.value)
+    printlog("Info", Entity().name, "Slider changed:", cc.l.uiElementToSettingMap[slider.index], slider.value)
     invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[slider.index].name, slider.value)
 end
 
