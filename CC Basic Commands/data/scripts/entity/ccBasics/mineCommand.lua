@@ -5,12 +5,11 @@ include ("faction")
 include ("utility")
 include ("callable")
 local docker = include ("data/scripts/lib/dockingLib")
-local printer = include ("data/scripts/lib/printlib")
-printer.identifier = "[CC-Minecommand] "
-printer.minPrintLevel = "All"
-printlog = printer.printlog
-print = printer.print
 
+local printer = include ("data/scripts/lib/printlib")
+local aprinter = printer("[CC-Minecommand] ", "Error")
+local print = function (...) return aprinter:print(...) end
+local printlog = function (...) return aprinter:printlog(...) end
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace mine
