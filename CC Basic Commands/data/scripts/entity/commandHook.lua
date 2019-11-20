@@ -9,7 +9,7 @@ hidden.addCommand("salvage", "Salvage Command", "data/scripts/entity/ccBasics/sa
 local mineCallbacks = {"onAsteroidCreated", "onSquadOrdersChanged", "onFighterAdded", "onJump", "onSectorEntered", "onSettingChanged"}
 hidden.addCommand("mine", "Mine Command", "data/scripts/entity/ccBasics/mineCommand", mineCallbacks)
 
-local attackCallbacks = {"onFlyableCreated", "onEntityEntered"}
+local attackCallbacks = {"onFlyableCreated", "onEntityEntered", "onSquadOrdersChanged", "onFighterAdded", "onJump", "onSectorEntered", "onSettingChanged"}
 hidden.addCommand("attack", "Attack Command", "data/scripts/entity/ccBasics/attackCommand", attackCallbacks)
 
 local repairCallbacks = {}

@@ -25,7 +25,6 @@ salvage.stateArgs = {}
 salvage.action = -1
 salvage.actionArgs = {}
 
-salvage.looterlist = {}
 salvage.hasRawLasers = false
 salvage.miningMaterial = nil
 

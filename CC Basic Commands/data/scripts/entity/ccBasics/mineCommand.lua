@@ -25,7 +25,6 @@ mine.stateArgs = {}
 mine.action = -1
 mine.actionArgs = {}
 
-mine.looterlist = {}
 mine.hasRawLasers = false
 mine.miningMaterial = nil
 
@@ -394,6 +393,7 @@ function mine.onFighterAdded(squadIndex, fighterIndex, landed)
 end
 
 function mine.onFighterRemove(squadIndex, fighterIndex, started)
+    print("IS This even called Once?")
     if started then
         -- mhh
     else
