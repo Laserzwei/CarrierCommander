@@ -38,6 +38,23 @@ local ordernames = {
 }
 function mine.initializationFinished()
     if onServer() then
+        local sector = Sector()
+
+        sector:registerCallback("onEntityCreated", "onEntityCreated")
+        --sector:registerCallback("onEntityEntered", "onEntityEntered")
+        local entity = Entity()
+        --entity:registerCallback("onSquadAdded","onSquadAdded")
+        --entity:registerCallback("onSquadRemove","onSquadRemove")
+        entity:registerCallback("onSquadOrdersChanged","onSquadOrdersChanged")
+
+        --entity:registerCallback("onFighterStarted","onFighterStarted")
+        --entity:registerCallback("onFighterLanded","onFighterLanded")
+        entity:registerCallback("onFighterAdded","onFighterAdded")
+        entity:registerCallback("onFighterRemove","onFighterRemove")
+        -- sector change
+        entity:registerCallback("onJump", "onJump")
+        entity:registerCallback("onSectorEntered", "onSectorEntered")
+
         if mine.state == "Disengaged" then
             mine.selectNewAndMine()
         elseif mine.state == "NoCargospace" then
@@ -61,41 +78,16 @@ function mine.initializationFinished()
     end
 end
 
-function mine.applyState(state, stateArgs, action, actionArgs)
-    if onServer() then
-        printlog("Info","Apply State: ", mine.state, state, unpack(stateArgs))
-        printlog("Info","Apply Action: ", mine.action, action, unpack(actionArgs))
-        mine.state = state
-        mine.stateArgs = stateArgs or {}
-        mine.action = action
-        mine.actionArgs = actionArgs or {}
-        mine.sendState()
-    end
-end
-
--- No passable arguments, so no invalid states can be sneaked in
+-- proxy for startup
 function mine.sendState()
-    broadcastInvokeClientFunction("receiveMineState", mine.state, mine.stateArgs, mine.action, mine.actionArgs)
+    Entity():invokeFunction("data/scripts/entity/CarrierCommander.lua", "sendState", mine.prefix)
 end
 callable(mine, "sendState")
 
-function cc.receiveMineState(...)
-    printlog("All","cc receiveMineState")
-    mine.receiveMineState(...)
-end
-
-function mine.receiveMineState(state, stateArgs, action, actionArgs)
-    if onClient() then
-        printlog("All","Received state: ", mine.state, state, unpack(stateArgs), mine.action, action, unpack(actionArgs))
-        mine.state = state
-        mine.stateArgs = stateArgs
-        mine.action = action
-        mine.actionArgs = actionArgs
-        if cc.uiInitialized then
-            local text = mine.createStatusMessage()
-            local color = cc.l.actionToColorMap[state]
-            cc.changeIndicator("mine", text, color)
-        end
+function mine.applyState(state, stateArgs, action, actionArgs)
+    if onServer() then
+        print("Debug","Apply State: ", mine.state, state, unpack(stateArgs), "Apply Action: ", mine.action, action, unpack(actionArgs))
+        Entity():invokeFunction("data/scripts/entity/CarrierCommander.lua", "changeState", mine.prefix, state, stateArgs or {}, action, actionArgs or {})
     end
 end
 
@@ -146,10 +138,6 @@ function mine.callTerminate()
     else
         printlog("Warn","Fixed yet? - Maybe yes")
     end
-end
-
-function mine.terminatus()
-    terminate()
 end
 
 function mine.selectNewAndMine()
@@ -337,13 +325,17 @@ function mine.onTargetDestroyed(index, lastDamageInflictor)
 end
 
 -- only change Asteroid, when no other is available
-function mine.onAsteroidCreated(asteroid)
-    if not valid(mine.target) then
-        mine.selectNewAndMine()
+function mine.onEntityCreated(entityId)
+    local entity = Entity(entityId)
+    printlog("Debug", "onEntityCreated", entity.isAsteroid)
+    if entity.isAsteroid then
+        if not valid(mine.target) then
+            mine.selectNewAndMine()
+        end
     end
 end
 
-function mine.onSquadOrdersChanged(squadIndex, order, targetId)
+function mine.onSquadOrdersChanged(_, squadIndex, order, targetId)
     if mine.squads[squadIndex] then
         printlog("Debug","Squad Order", squadIndex, ordernames[order], targetId.string, mine.state)
         -- we are waiting to get Disengaged and a different order was send to our last squad.
@@ -351,6 +343,7 @@ function mine.onSquadOrdersChanged(squadIndex, order, targetId)
         if mine.state == "Disengaged" and order ~= cc.settings.mineStopOrder then
             if tablelength(mine.squads) <= 1 then
                 printlog("Debug","squad changed terminate", cc.settings.mineStopOrder)
+                -- TODO make sure this gets to the client
                 mine.callTerminate()
             else --
                 cc.unclaimSquads(mine.prefix, {[squadIndex] = squadIndex})
@@ -361,8 +354,8 @@ function mine.onSquadOrdersChanged(squadIndex, order, targetId)
     end
 end
 
-function mine.onFighterAdded(squadIndex, fighterIndex, landed)
-    printlog("All","Fighter added", squadIndex, fighterIndex, landed)
+function mine.onFighterAdded(_, squadIndex, fighterIndex, landed)
+    print("All","Fighter added", squadIndex, fighterIndex, landed)
     if mine.squads[squadIndex] then
         if landed then
             local state, stateArgs, action, actionArgs = mine.state, mine.stateArgs, mine.action, mine.actionArgs
@@ -392,8 +385,7 @@ function mine.onFighterAdded(squadIndex, fighterIndex, landed)
     end
 end
 
-function mine.onFighterRemove(squadIndex, fighterIndex, started)
-    print("IS This even called Once?")
+function mine.onFighterRemove(_, squadIndex, fighterIndex, started)
     if started then
         -- mhh
     else
@@ -418,7 +410,7 @@ function mine.onSectorEntered(shipIndex, x, y)
 end
 
 function mine.onSettingChanged(setting, before, now)
-    printlog("Debug","onSettingChanged", setting, before, now, cc.settings.mineStopOrder)
+    printlog("Error","onSettingChanged", setting, before, now, cc.settings.mineStopOrder)
 end
 
 function mine.secure()

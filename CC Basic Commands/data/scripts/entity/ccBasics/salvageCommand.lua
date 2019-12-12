@@ -38,6 +38,24 @@ local ordernames = {
 }
 function salvage.initializationFinished()
     if onServer() then
+
+        local sector = Sector()
+
+        sector:registerCallback("onEntityCreated", "onEntityCreated")
+        --sector:registerCallback("onEntityEntered", "onEntityEntered")
+        local entity = Entity()
+        --entity:registerCallback("onSquadAdded","onSquadAdded")
+        --entity:registerCallback("onSquadRemove","onSquadRemove")
+        entity:registerCallback("onSquadOrdersChanged","onSquadOrdersChanged")
+
+        --entity:registerCallback("onFighterStarted","onFighterStarted")
+        --entity:registerCallback("onFighterLanded","onFighterLanded")
+        entity:registerCallback("onFighterAdded","onFighterAdded")
+        entity:registerCallback("onFighterRemove","onFighterRemove")
+        -- sector change
+        entity:registerCallback("onJump", "onJump")
+        entity:registerCallback("onSectorEntered", "onSectorEntered")
+
         if salvage.state == "Disengaged" then
             salvage.selectNewAndSalvage()
         elseif salvage.state == "NoCargospace" then
@@ -61,41 +79,16 @@ function salvage.initializationFinished()
     end
 end
 
-function salvage.applyState(state, stateArgs, action, actionArgs)
-    if onServer() then
-        printlog("Info","Apply State: ", salvage.state, state, unpack(stateArgs))
-        printlog("Info","Apply Action: ", salvage.action, action, unpack(actionArgs))
-        salvage.state = state
-        salvage.stateArgs = stateArgs or {}
-        salvage.action = action
-        salvage.actionArgs = actionArgs or {}
-        salvage.sendState()
-    end
-end
-
--- No passable arguments, so no invalid states can be sneaked in
+-- proxy for startup
 function salvage.sendState()
-    broadcastInvokeClientFunction("receiveSalvageState", salvage.state, salvage.stateArgs, salvage.action, salvage.actionArgs)
+    Entity():invokeFunction("data/scripts/entity/CarrierCommander.lua", "sendState", salvage.prefix)
 end
 callable(salvage, "sendState")
 
-function cc.receiveSalvageState(...)
-    printlog("All","cc receiveSalvageState")
-    salvage.receiveSalvageState(...)
-end
-
-function salvage.receiveSalvageState(state, stateArgs, action, actionArgs)
-    if onClient() then
-        printlog("All","Received state: ", salvage.state, state, unpack(stateArgs), salvage.action, action, unpack(actionArgs))
-        salvage.state = state
-        salvage.stateArgs = stateArgs
-        salvage.action = action
-        salvage.actionArgs = actionArgs
-        if cc.uiInitialized then
-            local text = salvage.createStatusMessage()
-            local color = cc.l.actionToColorMap[state]
-            cc.changeIndicator("salvage", text, color)
-        end
+function salvage.applyState(state, stateArgs, action, actionArgs)
+    if onServer() then
+        printlog("Debug","Apply State: ", salvage.state, state, unpack(stateArgs), "Apply Action: ", salvage.action, action, unpack(actionArgs))
+        Entity():invokeFunction("data/scripts/entity/CarrierCommander.lua", "changeState", salvage.prefix, state, stateArgs or {}, action, actionArgs or {})
     end
 end
 
@@ -325,15 +318,19 @@ function salvage.onTargetDestroyed(index, lastDamageInflictor)
 end
 
 -- only change Asteroid, when no other is available
-function salvage.onWreckageCreated(wreckage)
-    if not valid(salvage.target) then
-        salvage.selectNewAndSalvage()
+function salvage.onEntityCreated(entityId)
+    local entity = Entity(entityId)
+    printlog("Debug", "onEntityCreated", entity.isWreckage)
+    if entity.isWreckage then
+        if not valid(salvage.target) then
+            salvage.selectNewAndSalvage()
+        end
     end
 end
 
-function salvage.onSquadOrdersChanged(squadIndex, order, targetId)
+function salvage.onSquadOrdersChanged(_, squadIndex, order, targetId)
     if salvage.squads[squadIndex] then
-        printlog("Debug","Squad Order", squadIndex, ordernames[order], targetId.string, salvage.state)
+        printlog("Error","Squad Order", squadIndex, ordernames[order], targetId.string, salvage.state)
         -- we are waiting to get Disengaged and a different order was send to our last squad.
         -- Which makes waiting pointless. Our Job is done.
         if salvage.state == "Disengaged" and order ~= cc.settings.salvageStopOrder then
@@ -349,15 +346,15 @@ function salvage.onSquadOrdersChanged(squadIndex, order, targetId)
     end
 end
 
-function salvage.onFighterAdded(squadIndex, fighterIndex, landed)
-    printlog("All","Fighter added", squadIndex, fighterIndex, landed)
+function salvage.onFighterAdded(entityId, squadIndex, fighterIndex, landed)
+    print("Error","Fighter added", squadIndex, fighterIndex, landed)
     if salvage.squads[squadIndex] then
         if landed then
             local state, stateArgs, action, actionArgs = salvage.state, salvage.stateArgs, salvage.action, salvage.actionArgs
             local missing, landingSquads = salvage.dockingFighters(salvage.prefix, salvage.squads)
             if salvage.state == "Disengaged" then
                 if missing <= 0 then
-                    printlog("Debug","Disengaged and all fighters returned")
+                    print("Debug","Disengaged and all fighters returned")
                     salvage.callTerminate()
                     return
                 end
@@ -371,7 +368,7 @@ function salvage.onFighterAdded(squadIndex, fighterIndex, landed)
             end
             salvage.applyState(state, stateArgs, action, actionArgs)
         else
-            printlog("Debug","New fighter added", squadIndex, fighterIndex)
+            print("Debug","New fighter added", squadIndex, fighterIndex)
             if valid(salvage.target) then salvage.target:unregisterCallback("onDestroyed", "onDestroyed") end
             salvage.target = nil
             salvage.selectNewAndSalvage()
@@ -380,7 +377,7 @@ function salvage.onFighterAdded(squadIndex, fighterIndex, landed)
     end
 end
 
-function salvage.onFighterRemove(squadIndex, fighterIndex, started)
+function salvage.onFighterRemove(_, squadIndex, fighterIndex, started)
     if started then
         -- mhh
     else

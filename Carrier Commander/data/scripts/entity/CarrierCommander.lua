@@ -14,25 +14,12 @@ local printlog = function (...) return aprinter:printlog(...) end
 -- namespace cc
 cc = {}
 
-function cc.createCallbackList(commands)
-    local list = {}
-    for namespace, command in pairs(commands) do
-        for _,callback in pairs(command.callbacks or {}) do
-            if list[callback] then
-                table.insert(list[callback], namespace)
-            else
-                list[callback] = {namespace}
-            end
-        end
-    end
-    return list
-end
+
 
 --data
 cc.Config = include("data/config/CarrierCommanderConfig") -- server settings
 cc.l = include("data/scripts/lib/lists") -- contains selectableOrderNames, uiElementToSettingMap, actionTostringMap, tooltipadditions
 cc.commands = include("data/scripts/entity/commandHook") -- All commands register here
-cc.callbackList = cc.createCallbackList(cc.commands) -- [callback] = {[num] = namespace}
 
 cc.settings = {} --playersettings
 cc.claimedSquads = {}   -- <SquadIndex> = "scriptnamespace"
@@ -63,47 +50,12 @@ function cc.initializationFinished()
     if onClient() then
         printlog("Info", "request settings")
         cc.requestSettingsFromServer()
-    else
-        cc.registerCallbackss()
     end
 end
 
-function cc.registerCallbackss()
-
-    cc.registerSectorCallbacks(Sector():getCoordinates())
-    --squads
-    local entity = Entity()
-    entity:registerCallback("onSquadAdded","onSquadAdded")
-    entity:registerCallback("onSquadRemove","onSquadRemove")
-    entity:registerCallback("onSquadOrdersChanged","onSquadOrdersChanged")
-
-    entity:registerCallback("onFighterStarted","onFighterStarted")
-    entity:registerCallback("onFighterLanded","onFighterLanded")
-    entity:registerCallback("onFighterAdded","onFighterAdded")
-    entity:registerCallback("onFighterRemove","onFighterRemove")
-    -- sector change
-    entity:registerCallback("onJump", "onJump")
-    entity:registerCallback("onSectorEntered", "onSectorEntered")
-end
-
-function cc.registerSectorCallbacks(x, y)
-    local sector = Sector()
-
-    sector:registerCallback("onEntityCreate", "onEntityCreate")
-    sector:registerCallback("onEntityEntered", "onEntityEntered")
-end
-
-function cc.unregisterSectorCallbacks(x,y)
-    local sector = Sector()
-
-    --sector:unregisterCallback("onEntityCreate", "onEntityCreate")
-    --sector:unregisterCallback("onEntityEntered", "onEntityEntered")
-end
-
 function cc.eventCall(event, ...)
-    if not cc.callbackList[event] then return end   -- a.k.a. : No command registered that callback
-    for i, namespace in ipairs(cc.callbackList[event]) do
-        printlog(Info", ""Event", namespace,  _G[namespace] ~= nil, event, ...)
+    for namespace,_ in pairs(cc.commands) do
+        printlog("Info", "Event", namespace,  _G[namespace] ~= nil, event, ...)
         if _G[namespace] then   -- namespace is only available when the command is active
             --if _G[namespace][event] then    -- It's simply assumed that the modauthors, who added the event-callbackhook also implmented it
                 _G[namespace][event](...)
@@ -116,73 +68,20 @@ function cc.onEntityCreate(entityId)
     local entity = Entity(entityId)
     if entity.isFlyable then    -- Stations, Drone, Ship, Fighter
         printlog("Info", Entity().name, "Flyable Created", entity.isStation, entity.isDrone, entity.isShip, entity.isFighter)
-        cc.eventCall("onFlyableCreated", entity)
+        --cc.eventCall("onFlyableCreated", entity)
     elseif entity.isAsteroid then
         printlog("Info", Entity().name, "Asteroid created", entity.typename)
-        cc.eventCall("onAsteroidCreated", entity)
+        --cc.eventCall("onAsteroidCreated", entity)
     elseif entity.isWreckage then
         printlog("Info", Entity().name, "Wreckage created", entity.typename)
-        cc.eventCall("onWreckageCreated", entity)
+        --cc.eventCall("onWreckageCreated", entity)
     elseif entity.isLoot then
         printlog("Info", Entity().name, "Loot created", entity.typename)
-        cc.eventCall("onLootCreated", entity)
+        --cc.eventCall("onLootCreated", entity)
     else
         printlog("Info", Entity().name, "* created", entity.typename, entity.isTurret, entity.isAnomaly, entity.isUnknown, entity.isOther, entity.isWormHole)
-        --cc.eventCall("otherCreated", entity)
+        ----cc.eventCall("otherCreated", entity)
     end
-end
-
-function cc.onEntityEntered(shipIndex)
-    printlog("Info", Entity().name, "Entity Entered: ", Entity(shipIndex).name)
-    cc.eventCall("onEntityEntered", shipIndex)
-end
-
-function cc.onSquadAdded(entityId, squadIndex)-- gets also called on squadRename
-    printlog("Info", Entity().name, "Squad Changed, added or renamed", squadIndex)
-    cc.eventCall("onSquadAdded", squadIndex)
-end
-
-function cc.onSquadRemove(entityId, squadIndex)
-    printlog("Info", Entity().name, "Squad Changed, remove", squadIndex)
-    cc.eventCall("onSquadRemove", squadIndex)
-end
-
-function cc.onSquadOrdersChanged(entityId, squadIndex, orders, targetId)
-    printlog("Info", Entity().name, "Squad Order changed", squadIndex, orders, targetId, valid(Entity(targetId)) and Entity(targetId).name or "-E")
-    cc.eventCall("onSquadOrdersChanged", squadIndex, orders, targetId)
-end
-
-function cc.onFighterStarted(entityId, squadIndex, fighterId)
-    printlog("Info", Entity().name, Entity(entityId).name, "[AI] fighter started squad", squadIndex)
-    cc.eventCall("onFighterStarted", squadIndex, fighterId)
-end
-
-function cc.onFighterLanded(entityId, squadIndex, fighterId)
-    printlog("Info", Entity().name, "fighter landed squad", squadIndex, Entity(fighterId).name)
-    cc.eventCall("onFighterLanded", squadIndex, fighterId)
-end
-
-function cc.onFighterAdded(entityId, squadIndex, fighterIndex, landed)
-    printlog("Info", Entity().name, "fighter added to squad", squadIndex, fighterIndex, landed)
-    cc.eventCall("onFighterAdded", squadIndex, fighterIndex, landed)
-end
-
-function cc.onFighterRemove(entityId, squadIndex, fighterIndex, started) --entityTemplate is not accessable, even though it's supposed to be called BEFORE the fighter gets removed
-    printlog("Info", Entity().name, "fighter removed from squad", squadIndex, fighterIndex, started)
-    cc.eventCall("onFighterRemove", squadIndex, fighterIndex, started)
-end
-
---gets called before sector change
-function cc.onJump(shipIndex, x, y)
-    printlog("Info", Entity().name, "on Jump", x, y)
-    cc.unregisterSectorCallbacks(Sector():getCoordinates())
-    cc.eventCall("onJump", shipIndex, x, y)
-end
---gets called after sector change
-function cc.onSectorEntered(shipIndex, x, y)
-    printlog("Info", Entity().name, "on Sector entered", x, y)
-    cc.registerSectorCallbacks(Sector():getCoordinates())
-    cc.eventCall("onSectorEntered", shipIndex, x, y)
 end
 
 function cc.onSettingChanged(setting, before, now)
@@ -390,12 +289,55 @@ function cc.unclaimSquads(prefix, squads)
     end
 end
 
+function cc.changeState(prefix, state, stateArgs, action, actionArgs)
+    if cc.commands[prefix] then
+        local command = _G[prefix]
+        if command then
+            command.state = state
+            command.stateArgs = stateArgs
+            command.action = action
+            command.actionArgs = actionArgs
+            cc.sendState(prefix)
+        else
+            print(" changeState command", prefix, "called but not on entity")
+        end
+    else
+        print("prefix to change State is wrong", prefix)
+    end
+end
+
+function cc.sendState(prefix)
+    if cc.commands[prefix] then
+        local commandScript = _G[prefix]
+        if commandScript then
+            broadcastInvokeClientFunction("receiveState", prefix, commandScript.state, commandScript.stateArgs, commandScript.action, commandScript.actionArgs)
+        else
+            print("commandScript", prefix, "called but not on entity")
+        end
+    else
+        print("Player", callingPlayer, "called cc.sendState() with prefix:", prefix)
+    end
+end
+callable(cc, "sendState")
+
 if onClient() then
-function cc.changeIndicator(prefix, text, color)
-    if cc.uiInitialized then
-        local pic = cc.commands[prefix].statusPicture
-        pic.color = color
-        pic.tooltip = text
+function cc.receiveState(prefix, state, stateArgs, action, actionArgs)
+    local commandScript = _G[prefix]
+    if commandScript then
+        commandScript.state = state
+        commandScript.stateArgs = stateArgs
+        commandScript.action = action
+        commandScript.actionArgs = actionArgs
+        print("All", prefix, "Received state: ", commandScript.state, state, unpack(stateArgs), commandScript.action, action, unpack(actionArgs))
+        if cc.uiInitialized then
+            local pic = cc.commands[prefix].statusPicture
+            pic.color = cc.l.actionToColorMap[state]
+            local text = commandScript.createStatusMessage()
+            print("text", text)
+            pic.tooltip = text
+        end
+    else
+        print("commandScript", prefix, "called but not on entity (2)")
     end
 end
 end
@@ -459,7 +401,7 @@ end
 
 function cc.onComboBoxSelected(comboBox)
     cc.settings[cc.l.uiElementToSettingMap[comboBox.index].name] = comboBox.selectedValue
-    printlog("Info", Entity().name,"comboBox Select", cc.l.uiElementToSettingMap[slider.index], comboBox.selectedValue, comboBox.selectedEntry)
+    printlog("Info", Entity().name,"comboBox Select", cc.l.uiElementToSettingMap[comboBox.index], comboBox.selectedValue, comboBox.selectedEntry)
     invokeServerFunction("changeServerSettings", cc.l.uiElementToSettingMap[comboBox.index].name, comboBox.selectedValue)
 end
 
