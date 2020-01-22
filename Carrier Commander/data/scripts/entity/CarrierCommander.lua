@@ -385,7 +385,7 @@ function cc.buttonDeactivate(button)
     else
         local command = _G[button]
         if command then
-            print("send disable", cc.commands[button].path..".lua")
+            print("send disable", cc.commands[button].path..".lua", cc.settings.mineStopOrder)
             command.disable()
         end
     end

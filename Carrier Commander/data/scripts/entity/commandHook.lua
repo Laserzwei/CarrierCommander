@@ -7,21 +7,6 @@
 -- onLootCreated(entity)
 -- onOtherCreated(entity) <<< not implemented
 
-
--- onEntityEntered(shipIndex)
-
--- onSquadAdded(squadIndex)
--- onSquadRemove(squadIndex)
--- onSquadOrdersChanged(squadIndex, orders, targetId)
-
--- onFighterStarted(squadIndex, fighterId)
--- onFighterLanded(squadIndex, fighterId)
--- onFighterAdded(squadIndex, fighterIndex, landed)
--- onFighterRemove(squadIndex, fighterIndex, started)
-
--- onJump(shipIndex, x, y)
--- onSectorEntered(shipIndex, x, y)
-
 -- onSettingChanged(setting, before, now)
 
 -- Avoid putting Scripts in /entity/ai/...

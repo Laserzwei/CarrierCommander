@@ -20,6 +20,7 @@ docker.integrate(mine)
 mine.prefix = "mine"
 mine.squads = {}                 --[squadIndex] = squadIndex           --squads to manage
 mine.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+-- Status Icon & Text
 mine.state = -1
 mine.stateArgs = {}
 mine.action = -1
@@ -111,7 +112,7 @@ function mine.disable()
 
     if order ~= FighterOrders.Return then
         mine.applyState("Disengaged", {}, "None", {})
-        printlog("Debug","Mine Terminate")
+        print("All","Mine Terminate", cc.settings.mineStopOrder, FighterOrders.Return)
         mine.callTerminate()
     else
         local total, landing = docker.dockingFighters(mine.prefix, mine.squads)
@@ -138,6 +139,11 @@ function mine.callTerminate()
     else
         printlog("Warn","Fixed yet? - Maybe yes")
     end
+end
+
+function mine.terminatus()
+    Entity():invokeFunction("data/scripts/entity/CarrierCommander.lua", "clearIndicator", mine.prefix)
+    terminate()
 end
 
 function mine.selectNewAndMine()
@@ -360,9 +366,9 @@ function mine.onFighterAdded(_, squadIndex, fighterIndex, landed)
         if landed then
             local state, stateArgs, action, actionArgs = mine.state, mine.stateArgs, mine.action, mine.actionArgs
             local missing, landingSquads = mine.dockingFighters(mine.prefix, mine.squads)
-            if mine.state == "Disengaged" then
+            if state == "Disengaged" then
                 if missing <= 0 then
-                    printlog("Debug","Disengaged and all fighters returned")
+                    print("Debug","Disengaged and all fighters returned")
                     mine.callTerminate()
                     return
                 end
