@@ -49,7 +49,7 @@ function ButtonRect(w, h)
     local width = w or 280
     local height = h or 35
 
-    local space = math.floor((cc.window.size.y - 80) / (height + 10))
+    local space = math.floor((cc.window.size.y) / (height + 10))
     local row = math.floor(numButtons % space)
     local col = math.floor(numButtons / space)
 
@@ -79,7 +79,7 @@ end
 -- create all required UI elements for the client side
 function cc.initUI()
     local res = getResolution()
-    local size = vec2(335, 140 + (tablelength(cc.commands)*35))
+    local size = vec2(335, 65 + (tablelength(cc.commands)*(35+10)))
 
     local menu = ScriptUI()
     cc.window = menu:createWindow(Rect(res * 0.5 - size * 0.5, res * 0.5 + size * 0.5))
