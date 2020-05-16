@@ -45,7 +45,7 @@ function cc.getIcon(seed, rarity)
     return "data/textures/icons/fighter.png"
 end
 
-function ButtonRect(w, h)
+function cc.ButtonRect(w, h)
     local width = w or 280
     local height = h or 35
 
@@ -60,7 +60,7 @@ function ButtonRect(w, h)
     return Rect(lower, upper)
 end
 
-function iconRect(r)
+function cc.iconRect(r)
     local row = r or (numButtons-1)
     local y = (35 + 10) * row + 4
     local lower = vec2(280, y) + vec2(10,0)
@@ -97,10 +97,10 @@ function cc.initUI()
     table.sort(sortedPrefixes)
     for _,prefix in ipairs(sortedPrefixes) do
         local command = cc.commands[prefix]
-        local button = tab:createButton(ButtonRect(), command.name..(" [A]"), "buttonActivate")
+        local button = tab:createButton(cc.ButtonRect(), command.name..(" [A]"), "buttonActivate")
         button.textSize = 18
         button.maxTextSize = 18
-        local pic = tab:createPicture(iconRect(), "data/textures/icons/fighter.png")
+        local pic = tab:createPicture(cc.iconRect(), "data/textures/icons/fighter.png")
         pic.isIcon = true
         pic.tooltip = cc.l.actionTostringMap[-1]
         pic.color = cc.l.actionToColorMap[-1]
