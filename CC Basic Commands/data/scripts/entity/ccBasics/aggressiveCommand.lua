@@ -197,24 +197,26 @@ function attack.findEnemy()
         local entities = {Sector():getEntitiesByComponent(ComponentType.Owner)} -- hopefully all possible enemies
         local nearest = math.huge
         local hasTarget = valid(attack.target)
-        local distThreshold = (_G["cc"].settings["attack_reevaluationDistance"] or 15) * 1000
+        local distThreshold = (_G["cc"].settings["attack_reevaluationDistance"] or 15) * 100
         local priority = hasTarget and attack.getPriority(attack.target) or 0
         local proposedTarget = attack.target
 
 
         for _, e in pairs(entities) do
-            local dist = distance2(e.translationf, currentPos)
-            local newPrio = attack.getPriority(e)
-            -- higher prio -> new target
-            -- same prio and no current Target -> select closest new target
-            -- same prio and has a valid Target and new Target is 15km (default) closer than current target -> ignore current target and select closest new target
-            if newPrio > priority or (newPrio >= priority and dist < nearest) then
-               if (not hasTarget or
-                  (hasTarget and (dist + distThreshold) < distance2(attack.target.translationf, currentPos))) then
-                    if attack.checkEnemy(e) then
-                        nearest = dist
-                        proposedTarget = e
-                        priority = newPrio
+            if attack.lightweightCheck(e, ship, currentPos) then
+                local dist = distance(e.translationf, currentPos)
+                local newPrio = attack.getPriority(e, ship)
+                -- higher prio -> new target
+                -- same prio and no current Target -> select closest new target
+                -- same prio and has a valid Target and new Target is 15km (default) closer than current target -> ignore current target and select closest new target
+                if newPrio > priority or (newPrio >= priority and dist < nearest) then
+                   if (not hasTarget or
+                      (hasTarget and (dist + distThreshold) < distance(attack.target.translationf, currentPos))) then
+                        if attack.checkEnemy(e) then
+                            nearest = dist
+                            proposedTarget = e
+                            priority = newPrio
+                        end
                     end
                 end
             end
@@ -228,7 +230,15 @@ function attack.findEnemy()
     end
 end
 
-function attack.getPriority(entity)
+function attack.lightweightCheck(possibleTarget, homebase, currentPos)
+    if(possibleTarget.factionIndex == homebase.factionIndex) then
+        return false
+    else
+        return true
+    end
+end
+
+function attack.getPriority(entity, ship)
     if not valid(entity) then return -1 end
     local priority = -1
 

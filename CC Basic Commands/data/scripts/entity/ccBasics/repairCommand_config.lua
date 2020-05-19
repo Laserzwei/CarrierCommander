@@ -31,4 +31,3 @@ function repairCommand.initConfigUI(scrollframe, pos, size)
 end
 
 return repairCommand
---end

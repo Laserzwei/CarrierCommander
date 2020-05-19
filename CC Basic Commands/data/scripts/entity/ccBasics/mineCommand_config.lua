@@ -31,4 +31,3 @@ function mineCommand.initConfigUI(scrollframe, pos, size)
 end
 
 return mineCommand
---end

@@ -76,4 +76,3 @@ function aggressiveCommand.initConfigUI(scrollframe, pos, size)
 end
 
 return aggressiveCommand
---end
