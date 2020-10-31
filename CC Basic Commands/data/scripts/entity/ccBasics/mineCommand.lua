@@ -15,11 +15,9 @@ mine.squads = {}                 --[squadIndex] = squadIndex           --squads 
 mine.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 mine.disabled = false
 
-local checkAfterInit = true
-
 function mine.initialize()
     if onServer() then
-
+        mine.updateServer(1)
     else
         mine.applyStatus("idle")
     end
