@@ -17,11 +17,15 @@ attack.hostileThreshold = -40000
 
 function attack.initialize()
     if onServer() then
-        --attack.updateServer(0)
     else
-        attack.applyStatus("idle")
+        invokeServerFunction("initcall")
     end
 end
+
+function attack.initcall()
+    attack.updateServer(1)
+end
+callable(attack, "initcall")
 
 function attack.getUpdateInterval()
     if not valid(attack.target) and attack.disabled == false then return 15 end --deep sleep

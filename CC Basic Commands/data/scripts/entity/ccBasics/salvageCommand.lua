@@ -19,11 +19,15 @@ local checkAfterInit = true
 
 function salvage.initialize()
     if onServer() then
-        --salvage.updateServer(0)
     else
-        salvage.applyStatus("idle")
+        invokeServerFunction("initcall")
     end
 end
+
+function salvage.initcall()
+    salvage.updateServer(1)
+end
+callable(salvage, "initcall")
 
 function salvage.getUpdateInterval()
     if not valid(salvage.target) and salvage.disabled == false then return 15 end

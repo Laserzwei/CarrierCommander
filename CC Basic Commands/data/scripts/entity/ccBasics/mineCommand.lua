@@ -17,11 +17,17 @@ mine.disabled = false
 
 function mine.initialize()
     if onServer() then
-        mine.updateServer(1)
     else
-        mine.applyStatus("idle")
+        invokeServerFunction("initcall")
     end
 end
+
+function mine.initcall()
+    mine.updateServer(1)
+end
+callable(mine, "initcall")
+
+
 
 function mine.getUpdateInterval()
     if not valid(mine.target) and mine.disabled == false then return 15 end

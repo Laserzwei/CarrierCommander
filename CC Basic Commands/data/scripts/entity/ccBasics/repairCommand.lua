@@ -16,13 +16,15 @@ repair.disabled = false
 
 function repair.initialize()
     if onServer() then
-
     else
-        _G["cc"].l.actionTostringMap["repair"] = "Repairing ship %s"
-        _G["cc"].l.actionToColorMap["repair"] = ColorRGB(0.1, 0.8, 0.1)
-        repair.applyStatus("idle")
+        invokeServerFunction("initcall")
     end
 end
+
+function repair.initcall()
+    repair.updateServer(1)
+end
+callable(repair, "initcall")
 
 function repair.getUpdateInterval()
     if not valid(repair.target) and repair.disabled == false then return 15 end
