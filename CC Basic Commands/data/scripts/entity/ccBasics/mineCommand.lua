@@ -1,18 +1,17 @@
-
 package.path = package.path .. ";data/scripts/lib/?.lua"
-include ("faction")
-include ("utility")
-local docker = include ("data/scripts/lib/dockingLib")
+include("faction")
+include("utility")
+local docker = include("data/scripts/lib/dockingLib")
 
 -- Don't remove or alter the following comment, it tells the game the namespace this script lives in. If you remove it, the script will break.
 -- namespace mine
 mine = {}
 docker.integrate(mine)
 
---data
+-- data
 mine.prefix = "mine"
-mine.squads = {}                 --[squadIndex] = squadIndex           --squads to manage
-mine.controlledFighters = {}     --[1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
+mine.squads = {} -- [squadIndex] = squadIndex           --squads to manage
+mine.controlledFighters = {} -- [1-120] = fighterIndex        --List of all started fighters this command wants to controll/watch
 mine.disabled = false
 
 function mine.initialize()
@@ -27,11 +26,13 @@ function mine.initcall()
 end
 callable(mine, "initcall")
 
-
-
 function mine.getUpdateInterval()
-    if not valid(mine.target) and mine.disabled == false then return 15 end
-    if valid(mine.target) and mine.disabled == false then return 5 end
+    if not valid(mine.target) and mine.disabled == false then
+        return 15
+    end
+    if valid(mine.target) and mine.disabled == false then
+        return 5
+    end
     return 1
 end
 
@@ -84,7 +85,7 @@ end
 
 function mine.applyStatus(status, ...)
     if onClient() then
-        if  _G["cc"].uiInitialized then
+        if _G["cc"].uiInitialized then
             local args = {...}
 
             local pic = _G["cc"].commands[mine.prefix].statusPicture
@@ -104,7 +105,7 @@ function mine.disable()
     mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
     local fighterController = FighterController(Entity().index)
     mine.squads = _G["cc"].getClaimedSquads(mine.prefix)
-    for _,squad in pairs(mine.squads) do
+    for _, squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, mine.order, Entity().index)
     end
 
@@ -117,17 +118,19 @@ end
 
 function mine.mine()
     local fighterController = FighterController(Entity().index)
-    for _,squad in pairs(mine.squads) do
+    for _, squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, FighterOrders.Attack, mine.target.index)
     end
 end
 
 function mine.getSquadsToManage()
     local hangar = Hangar(Entity().index)
-    if not hangar or hangar.space <= 0 then return end
+    if not hangar or hangar.space <= 0 then
+        return
+    end
 
     local squads = {}
-    for _,squad in pairs({hangar:getSquads()}) do
+    for _, squad in pairs({hangar:getSquads()}) do
         if hangar:getSquadMainWeaponCategory(squad) == WeaponCategory.Mining then
             squads[squad] = squad
         end
@@ -150,8 +153,8 @@ function mine.findMinableAsteroid()
 
     if _G["cc"].settings["mineSquadNearest"] then
         local fighters = {Sector():getEntitiesByType(EntityType.Fighter)}
-        local num, pos = 0, vec3(0,0,0)
-        for _,fighter in pairs(fighters) do
+        local num, pos = 0, vec3(0, 0, 0)
+        for _, fighter in pairs(fighters) do
             local fAI = FighterAI(fighter)
             if fAI.mothershipId.number == numID and mine.squads[fAI.squad] then
                 num = num + 1
@@ -167,23 +170,21 @@ function mine.findMinableAsteroid()
         currentPos = ship.translationf
     end
 
-
-
-
-
+    local clamps = DockingClamps()
     local hasMiningSystem = ship:hasScript("systems/miningsystem.lua")
-    local asteroids = {sector:getEntitiesByType(EntityType.Asteroid)}
+    local mineable = {sector:getEntitiesByComponent(ComponentType.MineableMaterial)}
     local nearest = math.huge
-    --Go after the asteroid closest to the one just finished (Nearest Neighbor)
-    for _, a in pairs(asteroids) do
-        local resources = a:getMineableResources()
-        if ((a.isObviouslyMineable or hasMiningSystem) and
-           (resources ~= nil and resources > 0)) or
-            _G["cc"].settings["mineAllSetting"] then
-            local dist = distance2(a.translationf, currentPos)
-            if dist < nearest then
-                nearest = dist
-                mine.target = a
+    -- Go after the asteroid closest to the one just finished (Nearest Neighbor)
+    for _, a in pairs(mineable) do
+        if a.type == EntityType.Asteroid and clamps and not clamps:isDocked(a) and
+            (a.isObviouslyMineable or hasMiningSystem) then
+            local resources = a:getMineableResources()
+            if ((resources ~= nil and resources > 0)) or _G["cc"].settings["mineAllSetting"] then
+                local dist = distance2(a.translationf, currentPos)
+                if dist < nearest then
+                    nearest = dist
+                    mine.target = a
+                end
             end
         end
     end
@@ -194,14 +195,14 @@ end
 function mine.setSquadsIdle()
     local fighterController = FighterController(Entity().index)
     mine.order = _G["cc"].settings.mineStopOrder or FighterOrders.Return
-    for _,squad in pairs(mine.squads) do
+    for _, squad in pairs(mine.squads) do
         fighterController:setSquadOrders(squad, mine.order, Entity().index)
     end
 end
 
 function mine.secure()
     local data = {}
-    data.squads= mine.squads
+    data.squads = mine.squads
     data.order = mine.order
     data.disabled = mine.disabled
     return data
