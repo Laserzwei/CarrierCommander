@@ -170,16 +170,24 @@ function mine.findMinableAsteroid()
         currentPos = ship.translationf
     end
 
+    local mineAll = _G["cc"].settings["mineAllSetting"]
     local clamps = DockingClamps()
     local hasMiningSystem = ship:hasScript("systems/miningsystem.lua")
-    local mineable = {sector:getEntitiesByComponent(ComponentType.MineableMaterial)}
     local nearest = math.huge
+    local mineable
+    -- By ComponentType is faster, so we prefer it when by EntityType is not required (all Asteroids)
+    if mineAll ~= 1 then
+        mineable = {sector:getEntitiesByComponent(ComponentType.MineableMaterial)}
+    else
+        mineable = {sector:getEntitiesByType(EntityType.Asteroid)}
+    end
+    
     -- Go after the asteroid closest to the one just finished (Nearest Neighbor)
     for _, a in pairs(mineable) do
         if a.type == EntityType.Asteroid and clamps and not clamps:isDocked(a) and
-            (a.isObviouslyMineable or hasMiningSystem) then
+            (a.isObviouslyMineable or hasMiningSystem or mineAll) then
             local resources = a:getMineableResources()
-            if ((resources ~= nil and resources > 0)) or _G["cc"].settings["mineAllSetting"] then
+            if (resources ~= nil and resources > 0) or mineAll then
                 local dist = distance2(a.translationf, currentPos)
                 if dist < nearest then
                     nearest = dist
