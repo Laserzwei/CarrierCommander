@@ -172,7 +172,7 @@ function salvage.findWreckage()
     for _, w in pairs(wreckages) do
         local resources = salvage.sum({w:getMineableResources()})
 
-        if resources ~= nil and resources > 5 and not w.isAsteroid then
+        if resources ~= nil and resources > 5 and not w.isAsteroid and not w:getValue("valuable_object") then
             local dist = distance2(w.translationf, currentPos)
             if dist < nearest then
                 nearest = dist

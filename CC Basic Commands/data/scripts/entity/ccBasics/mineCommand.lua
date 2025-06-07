@@ -146,9 +146,22 @@ end
 -- check the sector for an asteroid that can be mined.
 -- if there is one, assign minableAsteroid
 function mine.findMinableAsteroid()
+    local operationalPos = getOperationalPosition()
+    local mineAll = _G["cc"].settings["mineAllSetting"]
+    if mineAll == true then
+        mine.target = getNearestAsteroid(operationalPos)
+    else
+        mine.target = getNearestMineralAsteroid(operationalPos)
+    end
+
+    return valid(mine.target)
+end
+
+-- Helper functions
+
+function getOperationalPosition()
     local ship = Entity()
     local numID = ship.index.number
-    local sector = Sector()
     local currentPos
 
     if _G["cc"].settings["mineSquadNearest"] then
@@ -170,34 +183,59 @@ function mine.findMinableAsteroid()
         currentPos = ship.translationf
     end
 
-    local mineAll = _G["cc"].settings["mineAllSetting"]
-    local clamps = DockingClamps()
+    return currentPos
+end
+
+function getNearestAsteroid(operationalPos)
+    local nearest = math.huge
+    local nearestAsteroid
+    mineable = {Sector():getEntitiesByType(EntityType.Asteroid)}
+
+    for _, a in pairs(mineable) do
+        if valid(a)
+            and not isDockedToAnything(a) -- Asteroid shall not be docked to anything
+            and not a:getValue("valuable_object") then -- No special objects (Mainly claimable Asteroids)
+            local dist = distance2(a.translationf, operationalPos)
+            if dist < nearest then
+                nearest = dist
+                nearestAsteroid = a
+            end
+        end
+    end
+
+    return nearestAsteroid
+end
+
+function getNearestMineralAsteroid(operationalPos)
+    local ship = Entity()
     local hasMiningSystem = ship:hasScript("systems/miningsystem.lua")
     local nearest = math.huge
-    local mineable
-    -- By ComponentType is faster, so we prefer it when by EntityType is not required (all Asteroids)
-    if mineAll ~= 1 then
-        mineable = {sector:getEntitiesByComponent(ComponentType.MineableMaterial)}
-    else
-        mineable = {sector:getEntitiesByType(EntityType.Asteroid)}
-    end
-    
-    -- Go after the asteroid closest to the one just finished (Nearest Neighbor)
+    local nearestAsteroid
+    mineable = {Sector():getEntitiesByComponent(ComponentType.MineableMaterial)} -- Includes wreckages
+
     for _, a in pairs(mineable) do
-        if a.type == EntityType.Asteroid and clamps and not clamps:isDocked(a) and
-            (a.isObviouslyMineable or hasMiningSystem or mineAll) then
+        if valid(a)
+            and a.type == EntityType.Asteroid  -- Only look for asteroids
+            and not isDockedToAnything(a) -- Asteroid shall not be docked to anything
+            and (a.isObviouslyMineable or hasMiningSystem) -- Accept asteroids with visible Minerals, or with Mining System installed also those with hidden minerals
+            and not a:getValue("valuable_object") then -- No special objects (Mainly claimable Asteroids)
             local resources = a:getMineableResources()
-            if (resources ~= nil and resources > 0) or mineAll then
-                local dist = distance2(a.translationf, currentPos)
+            if (resources ~= nil and resources > 0) then
+                local dist = distance2(a.translationf, operationalPos)
                 if dist < nearest then
                     nearest = dist
-                    mine.target = a
+                    nearestAsteroid = a
                 end
             end
         end
     end
 
-    return valid(mine.target)
+    return nearestAsteroid
+end
+
+function isDockedToAnything(asteroid)
+    local clamps = DockingClamps(asteroid)
+    return clamps and ({clamps:getDockedEntities()}).length > 0
 end
 
 function mine.setSquadsIdle()
